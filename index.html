@@ -3,71 +3,687 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YouTube</title>
+    <title>YouTube Dashboard & Dynamic Player Manager</title>
     <link rel="icon" href="./favicon.ico" type="image/x-icon">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body {
-    width: 100%;
-    height: 100%;
-    overflow: hidden; /* 스크롤바 감추기 */
-    background: #121212;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-#stage {
-    width: 2560px;
-    height: 1440px;
-    background-color: #ffffff; /* 기존 바탕색 유지 */
-    position: absolute;
-    transform-origin: center center;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
-    overflow: hidden;
-}
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #121212;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+        }
+        
+        /* 2560x1440 Stage Canvas */
+        #stage {
+            width: 2560px;
+            height: 1440px;
+            background-color: #ffffff;
+            position: absolute;
+            transform-origin: center center;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+            overflow: hidden;
+        }
+
         .editor-item {
             position: absolute;
             display: flex;
             align-items: center;
             justify-content: center;
         }
-        .editor-item > * {
-            width: 100%;
-            height: 100%;
-        }
         .editor-item svg {
             width: 100%;
             height: 100%;
             display: block;
+        }
+
+        /* 3개씩 자동 배치되는 무한 확장 메인 비디오 영역 */
+        #main-video-section {
+            position: absolute;
+            left: 144px;
+            top: 180px;
+            width: 2330px;
+            height: 1220px;
+            overflow-y: auto;
+            padding-right: 16px;
+        }
+
+        /* 메인 비디오 그리드: 3개마다 1줄씩 아래로 생성 */
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 32px;
+            padding-bottom: 60px;
+        }
+
+        /* Video Card Styling */
+        .video-card {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 540px;
+        }
+        
+        /* 클릭 가능한 썸네일 박스 영역 */
+        .thumbnail-box {
+            width: 100%;
+            height: 420px;
+            background-color: #000000;
+            border-radius: 19px;
+            overflow: hidden;
+            position: relative;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            display: block;
+            text-decoration: none;
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        .thumbnail-box:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 14px 35px rgba(0,0,0,0.25);
+        }
+        
+        /* 박스 내부 대체 안내 텍스트 */
+        .thumbnail-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            gap: 12px;
+        }
+        .thumbnail-content svg {
+            width: 64px;
+            height: 64px;
+            fill: #ff0000;
+        }
+        .thumbnail-content span {
+            font-size: 20px;
+            font-weight: 500;
+            color: #aaaaaa;
+        }
+
+        .video-info {
+            padding-top: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .video-title-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .channel-avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background-color: #e5e5e5;
+            object-fit: cover;
+            flex-shrink: 0;
+            border: 1px solid #ddd;
+        }
+        .video-title {
+            color: #111111;
+            font-size: 20px;
+            font-weight: bold;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .video-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .video-title a:hover {
+            color: #065fd4;
+        }
+        .video-meta {
+            color: #606060;
+            font-size: 16px;
+            font-weight: 500;
+            margin-top: 2px;
+            margin-left: 56px;
+        }
+
+        /* Search Bar Form Component */
+        .search-bar-container {
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            border: 2px solid #ccc;
+            border-radius: 58px;
+            display: flex;
+            align-items: center;
+            padding: 0 24px;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .search-bar-container:focus-within {
+            border-color: #065fd4;
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 22px;
+            color: #0f0f0f;
+            background: transparent;
+        }
+        .search-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+        .search-btn:hover {
+            background-color: #f2f2f2;
+        }
+
+        /* Scrollbar Styling */
+        #main-video-section::-webkit-scrollbar {
+            width: 10px;
+        }
+        #main-video-section::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 8px;
+        }
+        #main-video-section::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 8px;
+        }
+
+        /* Category Chip Style */
+        .chip-btn {
+            background: #f4f4f5;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #000;
+            font-size: 20px;
+            font-weight: 500;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        .chip-btn.active {
+            background: #0f0f0f;
+            color: #ffffff;
         }
     </style>
 </head>
 <body>
     <div id="stage">
         
-                
-            <div class="editor-item" style="left: 80px; top: 29px; width: 203.571px; height: 144.286px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M37.1384 18.8999V13.4399L40.6084 2.09994H38.0184L36.6984 7.24994C36.3984 8.42994 36.1284 9.65994 35.9284 10.7999H35.7684C35.6584 9.79994 35.3384 8.48994 35.0184 7.22994L33.7384 2.09994H31.1484L34.5684 13.4399V18.8999H37.1384Z"></path></svg></div><div class="editor-item" style="left: 108px; top: 29px; width: 45.381px; height: 30px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 20" style="width:100%; height:100%;">
-                    <path d="M14.4848 20C14.4848 20 23.5695 20 25.8229 19.4C27.0917 19.06 28.0459 18.08 28.3808 16.87C29 14.65 29 9.98 29 9.98C29 9.98 29 5.34 28.3808 3.14C28.0459 1.9 27.0917 0.94 25.8229 0.61C23.5695 0 14.4848 0 14.4848 0C14.4848 0 5.42037 0 3.17711 0.61C1.9286 0.94 0.954148 1.9 0.59888 3.14C0 5.34 0 9.98 0 9.98C0 9.98 0 14.65 0.59888 16.87C0.954148 18.08 1.9286 19.06 3.17711 19.4C5.42037 20 14.4848 20 14.4848 20Z" fill="#FF0033"></path>
-                </svg></div><div class="editor-item" style="left: 82px; top: 29px; width: 200px; height: 144px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M44.1003 6.29994C41.0703 6.29994 40.0303 8.04994 40.0303 11.8199V13.6099C40.0303 16.9899 40.6803 19.1099 44.0403 19.1099C47.3503 19.1099 48.0603 17.0899 48.0603 13.6099V11.8199C48.0603 8.44994 47.3803 6.29994 44.1003 6.29994ZM45.3903 14.7199C45.3903 16.3599 45.1003 17.3899 44.0503 17.3899C43.0203 17.3899 42.7303 16.3499 42.7303 14.7199V10.6799C42.7303 9.27994 42.9303 8.02994 44.0503 8.02994C45.2303 8.02994 45.3903 9.34994 45.3903 10.6799V14.7199Z"></path></svg></div><div class="editor-item" style="left: 79px; top: 29.6154px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M19 10L11.5 5.75V14.25L19 10Z" fill="white"></path></svg></div><div class="editor-item" style="left: 83px; top: 29px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M52.2713 19.0899C53.7313 19.0899 54.6413 18.4799 55.3913 17.3799H55.5013L55.6113 18.8999H57.6012V6.53994H54.9613V16.4699C54.6812 16.9599 54.0312 17.3199 53.4212 17.3199C52.6512 17.3199 52.4113 16.7099 52.4113 15.6899V6.53994H49.7812V15.8099C49.7812 17.8199 50.3613 19.0899 52.2713 19.0899Z"></path></svg></div><div class="editor-item" style="left: 84px; top: 29px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M62.8261 18.8999V4.14994H65.8661V2.09994H57.1761V4.14994H60.2161V18.8999H62.8261Z"></path></svg></div><div class="editor-item" style="left: 85px; top: 29px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M67.8728 19.0899C69.3328 19.0899 70.2428 18.4799 70.9928 17.3799H71.1028L71.2128 18.8999H73.2028V6.53994H70.5628V16.4699C70.2828 16.9599 69.6328 17.3199 69.0228 17.3199C68.2528 17.3199 68.0128 16.7099 68.0128 15.6899V6.53994H65.3828V15.8099C65.3828 17.8199 65.9628 19.0899 67.8728 19.0899Z"></path></svg></div><div class="editor-item" style="left: 86px; top: 29px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M80.6744 6.26994C79.3944 6.26994 78.4744 6.82994 77.8644 7.73994H77.7344C77.8144 6.53994 77.8744 5.51994 77.8744 4.70994V1.43994H75.3244L75.3144 12.1799L75.3244 18.8999H77.5444L77.7344 17.6999H77.8044C78.3944 18.5099 79.3044 19.0199 80.5144 19.0199C82.5244 19.0199 83.3844 17.2899 83.3844 13.6099V11.6999C83.3844 8.25994 82.9944 6.26994 80.6744 6.26994ZM80.7644 13.6099C80.7644 15.9099 80.4244 17.2799 79.3544 17.2799C78.8544 17.2799 78.1644 17.0399 77.8544 16.5899V9.23994C78.1244 8.53994 78.7244 8.02994 79.3944 8.02994C80.4744 8.02994 80.7644 9.33994 80.7644 11.7299V13.6099Z"></path></svg></div><div class="editor-item" style="left: 87px; top: 29px; width: 200px; height: 140px; color: rgb(255, 0, 0); outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width: 100%; height: 100%; color: rgb(255, 0, 0);"><path d="M92.6517 11.4999C92.6517 8.51994 92.3517 6.30994 88.9217 6.30994C85.6917 6.30994 84.9717 8.45994 84.9717 11.6199V13.7899C84.9717 16.8699 85.6317 19.1099 88.8417 19.1099C91.3817 19.1099 92.6917 17.8399 92.5417 15.3799L90.2917 15.2599C90.2617 16.7799 89.9117 17.3999 88.9017 17.3999C87.6317 17.3999 87.5717 16.1899 87.5717 14.3899V13.5499H92.6517V11.4999ZM88.8617 7.96994C90.0817 7.96994 90.1717 9.11994 90.1717 11.0699V12.0799H87.5717V11.0699C87.5717 9.13994 87.6517 7.96994 88.8617 7.96994Z"></path></svg></div><div class="editor-item" style="left: 100px; top: -6px; width: 337.333px; height: 66.6667px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">Astryx</p></div><div class="editor-item" style="left: 0px; top: 27px; width: 218.776px; height: 144.898px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M20 5H4a1 1 0 000 2h16a1 1 0 100-2Zm0 6H4a1 1 0 000 2h16a1 1 0 000-2Zm0 6H4a1 1 0 000 2h16a1 1 0 000-2Z"></path></svg></div><div class="editor-item" style="left: 0px; top: 117px; width: 219.408px; height: 146px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="m11.485 2.143-8 4.8-2 1.2a1 1 0 001.03 1.714L3 9.567V20a2 2 0 002 2h5v-8h4v8h5a2 2 0 002-2V9.567l.485.29a1 1 0 001.03-1.714l-2-1.2-8-4.8a1 1 0 00-1.03 0Z"></path></svg></div><div class="editor-item" style="left: -115px; top: 138px; width: 337.333px; height: 66.6667px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">홈</p></div><div class="editor-item" style="left: 0px; top: 230.878px; width: 219.408px; height: 146px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="m13.467 1.19-8 4.7a5 5 0 00-.255 8.46 5 5 0 005.32 8.462l8-4.7a5 5 0 00.258-8.462 5 5 0 001.641-6.464l-.12-.217a5 5 0 00-6.844-1.78m5.12 2.79a2.999 2.999 0 01-1.067 4.107l-1.327.78a1 1 0 00.096 1.775l.943.423a3 3 0 01.288 5.323l-8 4.7a3 3 0 01-3.039-5.173l1.327-.78a1 1 0 00-.097-1.775l-.942-.423a3 3 0 01-.288-5.323l8-4.7a3 3 0 014.106 1.066ZM15 12l-5-3v6l5-3Z"></path></svg></div><div class="editor-item" style="left: 0px; top: 344.408px; width: 219.408px; height: 146px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M18 1H6a2 2 0 00-2 2h16a2 2 0 00-2-2Zm3 4H3a2 2 0 00-2 2v13a2 2 0 002 2h18a2 2 0 002-2V7a2 2 0 00-2-2ZM3 20V7h18v13H3Zm13-6.5L10 10v7l6-3.5Z"></path></svg></div><div class="editor-item" style="left: 0px; top: 459.102px; width: 219.408px; height: 146px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M12 1C5.925 1 1 5.925 1 12s4.925 11 11 11 11-4.925 11-11S18.075 1 12 1Zm0 2a9 9 0 016.447 15.276 7 7 0 00-12.895 0A9 9 0 0112 3Zm0 2a4 4 0 100 8 4 4 0 000-8Zm0 2a2 2 0 110 4 2 2 0 010-4Zm-.1 9.001L11.899 16a5 5 0 014.904 3.61A8.96 8.96 0 0112 21a8.96 8.96 0 01-4.804-1.391 5 5 0 014.704-3.608Z"></path></svg></div><div class="editor-item" style="left: -115px; top: 253px; width: 337.333px; height: 66.6667px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">Shorts</p></div><div class="editor-item" style="left: -115px; top: 366px; width: 337.333px; height: 66.6667px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">구독</p></div><div class="editor-item" style="left: -115px; top: 480px; width: 337.333px; height: 66.6667px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 14px; font-weight: bold; display: flex; align-items: center; justify-content: center;">내 페이지</p></div><div class="editor-item" style="left: 143px; top: 104px; width: 76px; height: 49.25px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">전체</div></div><div class="editor-item" style="left: 235.5px; top: 104px; width: 76px; height: 49.25px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">음악</div></div><div class="editor-item" style="left: 325.625px; top: 104px; width: 76px; height: 49.25px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">믹스</div></div><div class="editor-item" style="left: 423.75px; top: 104px; width: 76px; height: 49.25px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">뉴스</div></div><div class="editor-item" style="left: 516px; top: 104px; width: 111px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">팟캐스트</div></div><div class="editor-item" style="left: 647px; top: 104px; width: 92.7391px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">라이브</div></div><div class="editor-item" style="left: 759px; top: 104px; width: 53.8696px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">랩</div></div><div class="editor-item" style="left: 831px; top: 103px; width: 132.739px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">애니메이션</div></div><div class="editor-item" style="left: 982px; top: 104px; width: 151.261px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">마인크래프트</div></div>
-                <div class="editor-item" style="left: 1153px;top: 104px; width: 198.826px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">액션 어드벤처 게임</div></div><div class="editor-item" style="left: 1372px; top: 104px; width: 239px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">최근에 업로드된 동영상</div></div><div class="editor-item" style="left: 1629px; top: 104px; width: 156.5px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">감상한 동영상</div></div><div class="editor-item" style="left: 1805px; top: 105px; width: 198.5px; height: 49px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 12px; display: flex; align-items: center; justify-content: center; color: rgb(0, 0, 0); font-size: 24px;">새로운 맞춤 동영상</div></div><div class="editor-item" style="left: 144.645px; top: 206px; width: 770px; height: 432.697px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 19px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">테스트1</div></div><div class="editor-item" style="left: 938.462px; top: 206px; width: 770px; height: 432.697px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 19px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">테스트2</div></div><div class="editor-item" style="left: 1730.74px; top: 207px; width: 770px; height: 432.697px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 19px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">테스트3</div></div><div class="editor-item" style="left: 792px; top: 15px; width: 899.07px; height: 58px; outline: none;"><button style="background: rgb(255, 255, 255); color: rgb(255, 255, 255); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 58px; font-size: 28px; font-weight: bold; cursor: pointer;"></button></div><div class="editor-item" style="left: 1717px; top: 15px; width: 58px; height: 58px; outline: none;"><button style="background: rgb(242, 242, 242); color: rgb(255, 255, 255); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 58px; font-size: 28px; font-weight: bold; cursor: pointer;"></button></div><div class="editor-item" style="left: 1551px; top: 29px; width: 31px; height: 30.4737px; outline: none;"><img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABMAAAALCAYAAACd1bY6AAAABHNCSVQICAgIfAhkiAAAAE5JREFUKJHtkDEKwDAMAy+hg/7sJeBPa0unQslSSDz2FmFjJOGWmdM2p0iiVxgB2KY/wxjjSAFaRMySavA32+BaF++kL9bb2p9JKjGSxA09hjxcPLr8lgAAAABJRU5ErkJggg==" style="width:100%; height:100%; object-fit: contain;"></div><div class="editor-item" style="left: 1596.33px; top: 28px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M11 2a9 9 0 105.641 16.01.966.966 0 00.152.197l3.5 3.5a1 1 0 101.414-1.414l-3.5-3.5a1 1 0 00-.197-.153A8.96 8.96 0 0020 11a9 9 0 00-9-9Zm0 2a7 7 0 110 14 7 7 0 010-14Z"></path></svg></div><div class="editor-item" style="left: 2197px; top: 15px; width: 149.333px; height: 58px; outline: none;"><button style="background: rgb(242, 242, 242); color: rgb(255, 255, 255); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 58px; font-size: 28px; font-weight: bold; cursor: pointer;"></button></div><div class="editor-item" style="left: 1575px; top: 633px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">테스트3_제목</p></div><div class="editor-item" style="left: 2344px; top: 27px; width: 200px; height: 140px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="M16 19a4 4 0 11-8 0H4.765C3.21 19 2.25 17.304 3.05 15.97l1.806-3.01A1 1 0 005 12.446V8a7 7 0 0114 0v4.446c0 .181.05.36.142.515l1.807 3.01c.8 1.333-.161 3.029-1.716 3.029H16ZM12 3a5 5 0 00-5 5v4.446a3 3 0 01-.428 1.543L4.765 17h14.468l-1.805-3.01A3 3 0 0117 12.445V8a5 5 0 00-5-5Zm-2 16a2 2 0 104 0h-4Z"></path></svg></div><div class="editor-item" style="left: 2454px; top: 20px; width: 48px; height: 48px; outline: none;"><button style="background: rgb(242, 242, 242); color: rgb(0, 0, 0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 48px; font-size: 10px; font-weight: bold; cursor: pointer;">프로필</button></div><div class="editor-item" style="left: 1732px; top: 657.481px; width: 54px; height: 54.7037px; outline: none;"><button style="background: rgb(242, 242, 242); color: rgb(0, 0, 0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 54px; font-size: 10px; font-weight: bold; cursor: pointer;">프로필3</button></div><div class="editor-item" style="left: 1592px; top: 699px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(117, 117, 117); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">조회수 a회 .a일전</p></div><div class="editor-item" style="left: 1583px; top: 668px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">테스트3_닉네임</p></div><div class="editor-item" style="left: 781px; top: 633px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">테스트2_제목</p></div><div class="editor-item" style="left: 942px; top: 657px; width: 54px; height: 54.7037px; outline: none;"><button style="background: rgb(242, 242, 242); color: rgb(0, 0, 0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 54px; font-size: 10px; font-weight: bold; cursor: pointer;">프로필2</button></div><div class="editor-item" style="left: 791px; top: 668px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">테스트2_닉네임</p></div><div class="editor-item" style="left: 802px; top: 699px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(117, 117, 117); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">조회수 a회 .a일전</p></div><div class="editor-item" style="left: 141px; top: 657px; width: 54px; height: 54.7037px; outline: none;"><button style="background: rgb(242, 242, 242); color: rgb(0, 0, 0); border-width: medium; border-style: none; border-color: currentcolor; border-image: none; border-radius: 54px; font-size: 10px; font-weight: bold; cursor: pointer;">프로필1</button></div><div class="editor-item" style="left: -4px; top: 668px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">테스트1_닉네임</p></div><div class="editor-item" style="left: -15px; top: 633px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(51, 51, 51); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">테스트1_제목</p></div><div class="editor-item" style="left: 6px; top: 699px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(117, 117, 117); font-size: 24px; font-weight: bold; display: flex; align-items: center; justify-content: center;">조회수 a회 .a일전</p></div><div class="editor-item" style="left: 145px; top: 936px; width: 451px; height: 679px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">숏폼테스트_1</div></div><div class="editor-item" style="left: 622px; top: 936px; width: 451px; height: 679px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">숏폼테스트_2</div></div><div class="editor-item" style="left: 1097px; top: 936px; width: 451px; height: 679px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">숏폼테스트_3</div></div><div class="editor-item" style="left: 1575px; top: 936px; width: 451px; height: 679px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">숏폼테스트_4</div></div><div class="editor-item" style="left: 2049px; top: 936px; width: 451px; height: 679px; outline: none;"><div style="background: rgb(244, 244, 245); border-radius: 14px; display: flex; align-items: center; justify-content: center; color: rgb(51, 51, 51); font-size: 24px;">숏폼테스트_5</div></div><div class="editor-item" style="left: 119px; top: 865px; width: 219.408px; height: 146px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;">
-                    <path d="m19.45,3.88c1.12,1.82.48,4.15-1.42,5.22l-1.32.74.94.41c1.36.58,2.27,1.85,2.35,3.27.08,1.43-.68,2.77-1.97,3.49l-8,4.47c-1.91,1.06-4.35.46-5.48-1.35-1.12-1.82-.48-4.15,1.42-5.22l1.33-.74-.94-.41c-1.36-.58-2.27-1.85-2.35-3.27-.08-1.43.68-2.77,1.97-3.49l8-4.47c1.91-1.06,4.35-.46,5.48,1.35Z" fill="#f03"></path></svg></div><div class="editor-item" style="left: 120px; top: 864px; width: 219.408px; height: 146px; outline: none;"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="width:100%; height:100%;"><path d="m10,15l5-3-5-3v6Z" fill="#fff"></path></svg></div><div class="editor-item" style="left: -51.2222px; top: 839.778px; width: 600px; height: 80px; outline: none;"><p style="color: rgb(0, 0, 0); font-size: 28px; font-weight: bold; display: flex; align-items: center; justify-content: center;">Shorts</p></div>
+        <!-- 로고 및 상단 브랜딩 (정상 SVG 아이콘 적용) -->
+        <div class="editor-item" style="left: 30px; top: 25px; width: 40px; height: 40px;">
+            <svg viewBox="0 0 24 24" fill="#0f0f0f"><path d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"/></svg>
+        </div>
+        <div class="editor-item" style="left: 80px; top: 28px; width: 32px; height: 32px;">
+            <svg viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+        </div>
+        <div class="editor-item" style="left: 118px; top: 20px; width: 120px; height: 48px;">
+            <p style="color: #0f0f0f; font-size: 26px; font-weight: bold; letter-spacing: -1px;">YouTube <span style="font-size: 14px; vertical-align: super; color: #606060;">KR</span></p>
+        </div>
+        
+        <!-- 좌측 사이드바 메뉴 -->
+        <div class="editor-item" style="left: 30px; top: 110px; width: 100px; height: 30px;"><p style="color: #0f0f0f; font-size: 20px; font-weight: bold;">홈</p></div>
+        <div class="editor-item" style="left: 30px; top: 160px; width: 100px; height: 30px;"><p style="color: #0f0f0f; font-size: 20px; font-weight: 500;">Shorts</p></div>
+
+        <!-- 상단 카테고리 태그 -->
+        <div class="editor-item" style="left: 143px; top: 104px; width: 76px; height: 49.25px;"><div class="chip-btn active">전체</div></div>
+        <div class="editor-item" style="left: 235.5px; top: 104px; width: 76px; height: 49.25px;"><div class="chip-btn">음악</div></div>
+        <div class="editor-item" style="left: 325.625px; top: 104px; width: 76px; height: 49.25px;"><div class="chip-btn">믹스</div></div>
+        <div class="editor-item" style="left: 423.75px; top: 104px; width: 76px; height: 49.25px;"><div class="chip-btn">뉴스</div></div>
+
+        <!-- 상단 동적 검색 바 -->
+        <div class="editor-item" style="left: 792px; top: 15px; width: 899.07px; height: 58px;">
+            <form id="url-search-form" class="search-bar-container" onsubmit="handleUrlSubmit(event)">
+                <input 
+                    type="text" 
+                    id="custom-id-input" 
+                    class="search-input" 
+                    placeholder="등록할 Custom watch ID를 입력하세요 (예: a1b2c3d4)" 
+                    autocomplete="off"
+                    required
+                />
+                <button type="submit" class="search-btn" title="watch ID 추가">
+                    <svg style="width:28px; height:28px;" viewBox="0 0 24 24" fill="#0f0f0f">
+                        <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                    </svg>
+                </button>
+            </form>
+        </div>
+
+        <!-- 무한 배치 지원 메인 동영상 영역 (한 줄에 3개씩 자동 배치) -->
+        <div id="main-video-section">
+            <div class="video-grid" id="video-grid-container">
+                <!-- 동적으로 카드 항목이 3개씩 배치됩니다 -->
+            </div>
+        </div>
+
     </div>
+
 <script>
+    let videoList = [
+        {
+            customId: "-lmqfzK4pLo",
+            title: "30..",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "21,009회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "17tMsblcNh4",
+            title: "fromis_9 (프로미스나인) 'Vitamin ME' 응원법",
+            channel: "fromis_9",
+            avatar: "https://www.youtube.com/@fromis9_official",
+            views: "94,539회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "1twApYg5r8I",
+            title: "실패하면 까발려지는 챌린지",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "26,412회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "88gHAb2xMTE",
+            title: "프러포즈도 재활용 당하는 련",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "10,475회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "Cz_T5vw9YWs",
+            title: "너만 몰랐어 코코야",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "45,952회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "dVHtnYnoM-A",
+            title: "거절하기엔 너무 많은...",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "15,999회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "ehl42m54aX8",
+            title: "코코야 제발 닥쳐!!!",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "24,295회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "Fs8WsCZASBo",
+            title: "왜 나만... 왜...",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "19,348회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "g7Y6Cj3MJMY",
+            title: "잉잉 목이 아파",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "37,108회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "GaYymrWw11A",
+            title: "유튜브 관리자님 죄송해요",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "34,354회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "GO6GnHz4LYE",
+            title: "전남친을 질투해요",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "59,834회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "H0hhaQNq1Z0",
+            title: "유유상종",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "32,839회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "hSiFDAIZz2k",
+            title: "생일... 기대흐지믈르그...",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "1,592회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "I24isSBC58g",
+            title: "아빠 재능 없어 물리 저브셈",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "153,861회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "I6qSmA9Im6Y",
+            title: "이게 사람이야 짐승이야",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "42,168회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "iF_qVOS4wh4",
+            title: "다람쥐 땅콩 대가리련...",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "23,361회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "IXVmEpU7pqI",
+            title: "나는 한마리의 아기사슴 코코",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "16,210회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "J61uSmmBRnY",
+            title: "어떻게 시키는 일이...",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "28,880회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "JBtDJC_4IdM",
+            title: "교수와 버튜버",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "54,266회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "ju2hH6XcgqY",
+            title: "지퍼를 조심해야 하는 이유",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "44,061회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "K5G9z5eQFJA",
+            title: "민초단이 경멸받는 이유",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "16,308회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "L2UC1nNHCyY",
+            title: "라코코가 하고싶은것을 본 키몽이 : ㄱ-",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "23,434회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "l3wtCQTjZ08",
+            title: "늙크크 라코코",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "28,921회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "mx8qBnxNAiw",
+            title: "스웨덴 세탁소 - 그래도 나 사랑하지 (Cover) - Cover by 라코코",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "50,967회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "o64KsTJ8oRw",
+            title: "XXX : 코코님 이제 갈아입으실 필요가 없어요~",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "22,895회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "P-E66nAqkbI",
+            title: "엣큥...!",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "48,199회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "pQAZExBGuPU",
+            title: "살려주세요 키몽이 여러분",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "14,833회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "Q56KUNB24BM",
+            title: "한 vs 중 vs 일 어흐어흐 갈드컵",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "17,852회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "r9Yw2kWhIuA",
+            title: "파멸적인 유튜브",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "24,524회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "RbsQAfJH7L8",
+            title: "여자끼리는 '가능'",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "14,965회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "rQpkunIxOqA",
+            title: "힝 너무해 내 마음도 모르고!",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "17,904회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "Shab7cg2FOI",
+            title: "\"이런 아줌마가 어디가 좋다고..\"",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "15,030회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "U0eV8COaZ10",
+            title: "선생님 화장실!!",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "33,151회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "Vu0tGnWxS24",
+            title: "이제는 포기한 라코코",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "20,858회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "WtDa1XAU74o",
+            title: "코코님 데바데 쉬워요 ^^",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "10,229회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "WUIQqKuxI88",
+            title: "겁쟁이 쟈코련",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "8,751회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "X2wsO_gsxB0",
+            title: "야 일루와 으아아악",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "20,819회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "Y3jlgLg021s",
+            title: "코코야 나랑 결혼해 줘 제발",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "19,509회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "ym0LTee7nas",
+            title: "라코코가 결혼 못 하는 이유.jpg",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "79,114회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "zFhaH019674",
+            title: "라코코의 쿠키",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "29,570회",
+            uploaded: "최근 업로드"
+        },
+        {
+            customId: "_031LgV1tho",
+            title: "요즘 선생님들 힘들다...",
+            channel: "라코코_RAKOKO",
+            avatar: "https://www.youtube.com/@RAKOKO_official",
+            views: "31,260회",
+            uploaded: "최근 업로드"
+        }
+    ];
+
+    // 비디오 목록 렌더링
+    function renderVideoGrid() {
+        const container = document.getElementById("video-grid-container");
+        if (!container) return;
+        container.innerHTML = "";
+
+        videoList.forEach((video) => {
+            const card = document.createElement("div");
+            card.className = "video-card";
+            
+            const targetUrl = `https://revolution-operates-verified-consultation.trycloudflare.com/watch/${video.customId}/index.html`;
+
+            // 클릭 시 watch/customId/index.html로 정상 이동하도록 <a> 태그로 썸네일 박스와 제목 연결
+            card.innerHTML = `
+                <div id="${video.customId}" class="dynamic-watch-item video-card-inner" style="width:100%; height:100%;">
+                    <a href="${targetUrl}" class="thumbnail-box">
+                        <div class="thumbnail-content">
+                            <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                        </div>
+                    </a>
+                    <div class="video-info">
+                        <div class="video-title-row">
+                            <img class="channel-avatar" src="${video.avatar}" alt="${video.channel}">
+                            <div class="video-title">
+                                <a href="${targetUrl}">
+                                    ${video.title} (ID: ${video.customId})
+                                </a>
+                            </div>
+                        </div>
+                        <div class="video-meta">${video.channel} · 조회수 ${video.views} · ${video.uploaded}</div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    // 상단 입력창을 통한 새로운 Custom ID 추가 핸들러
+    function handleUrlSubmit(event) {
+        event.preventDefault();
+        const inputEl = document.getElementById("custom-id-input");
+        const enteredId = inputEl.value.trim();
+        if (!enteredId) return;
+
+        const newVideo = {
+            customId: enteredId,
+            title: `로컬 추가 영상 (ID: ${enteredId})`,
+            channel: "사용자 커스텀",
+            avatar: `https://api.dicebear.com/7.x/identicon/svg?seed=${enteredId}`,
+            views: "조회수 1회",
+            uploaded: "방금 전"
+        };
+
+        videoList.unshift(newVideo);
+        renderVideoGrid();
+        inputEl.value = "";
+    }
+
+    // 반응형 2560x1440 캔버스 스케일 조절
     function resizeStage() {
         const stage = document.getElementById('stage');
-        const windowWidth = window.innerWidth;
-        const windowHeight = window.innerHeight;
-
-        // X축과 Y축 배율을 독립적으로 계산 (너비와 높이 각각에 딱 맞춤)
-        const scaleX = windowWidth / 2560;
-        const scaleY = windowHeight / 1400;
-
-        // scale(X, Y) 형태로 X와 Y를 따로 늘려 화면 전체에 채움
+        if (!stage) return;
+        const scaleX = window.innerWidth / 2560;
+        const scaleY = window.innerHeight / 1440;
         stage.style.transform = `scale(${scaleX}, ${scaleY})`;
     }
 
     window.addEventListener('resize', resizeStage);
-    window.addEventListener('load', resizeStage);
+    window.addEventListener('load', () => {
+        resizeStage();
+        renderVideoGrid();
+    });
 </script>
 </body>
 </html>
