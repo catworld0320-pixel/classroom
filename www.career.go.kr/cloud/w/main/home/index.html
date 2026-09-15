@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title id="page-title">메인 | 진로정보망 커리어넷</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico">
+
+    <style>
+        /* 위장용 iframe 오버레이 */
+        #stealth-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #ffffff;
+            z-index: 999999;
+            border: none;
+        }
+
+        #stealth-overlay iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* 토글용 숨김 클래스 */
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- 위장용 커리어넷 화면 -->
+    <div id="stealth-overlay">
+        <iframe id="stealth-frame" src="https://www.career.go.kr"></iframe>
+    </div>
+
+    <div class="app-container">
+        <!-- 상단 헤더 & 검색 & 테마 변경 -->
+        <header class="top-bar">
+            <img src="logo.png" alt="My Logo" class="header-logo">
+            <div class="header-right">
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="곡 제목 또는 가수 검색..." onkeyup="searchSongs()">
+                </div>
+                <button id="theme-toggle-btn" class="theme-btn" onclick="toggleTheme()">🌙</button>
+            </div>
+        </header>
+
+        <main class="main-content">
+            <!-- 음원 탐색 목록 -->
+            <section class="song-list-container">
+                <h3>🎵 음원 목록 / 검색 결과</h3>
+                <ul id="song-list"></ul>
+            </section>
+
+            <!-- 내 재생목록 -->
+            <section class="playlist-container">
+                <h3>📋 내 재생목록</h3>
+                <ul id="my-playlist"></ul>
+            </section>
+
+            <!-- 멜론/지니 스타일 전체 가사 뷰어 -->
+            <section class="lyrics-view-container">
+                <h3>📜 전체 가사</h3>
+                <div id="lyrics-scroll-box" class="lyrics-scroll-box">
+                    <p class="no-lyric">곡을 선택하면 가사가 출력됩니다.</p>
+                </div>
+            </section>
+        </main>
+
+        <!-- 하단 미디어 플레이어 바 -->
+        <footer class="player-bar">
+            <audio id="audio-player" playsinline></audio>
+            
+            <div class="song-info">
+                <img id="player-cover" src="" alt="Cover" onerror="handleImageError(this)">
+                <div class="text-group">
+                    <div id="player-title">곡을 선택해주세요</div>
+                    <div id="player-artist">가수명</div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <div class="buttons">
+                    <button onclick="prevSong()">⏮</button>
+                    <button id="play-btn" onclick="togglePlay()">▶</button>
+                    <button onclick="nextSong()">⏭</button>
+                </div>
+                <div class="progress-group">
+                    <input type="range" id="progress-bar" value="0" min="0" max="100" onchange="seekAudio(this.value)">
+                    <span id="time-display">00:00 / 00:00</span>
+                </div>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        function handleImageError(img) {
+            img.onerror = null;
+            img.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="50" height="50" viewBox="0 0 50 50"><rect width="50" height="50" fill="%23ccc"/></svg>';
+        }
+
+        // 토글 동작 메인 함수
+        function toggleStealthMode() {
+            const overlay = document.getElementById('stealth-overlay');
+            const title = document.getElementById('page-title');
+
+            if (overlay.classList.contains('hidden')) {
+                overlay.classList.remove('hidden');
+                title.innerText = "커리어넷 : 커리어넷 커뮤니티";
+            } else {
+                overlay.classList.add('hidden');
+                title.innerText = "Genie Web Player";
+            }
+        }
+
+        // 1. 단축키 감지 (keydown & keyup 보완)
+        function handleShortcut(e) {
+            if (e.altKey && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')) {
+                e.preventDefault();
+                toggleStealthMode();
+            }
+        }
+
+        window.addEventListener('keydown', handleShortcut);
+
+        // 2. iframe 클릭 시 포커스 뺏김 처리 (blur 주기적 포커스 복원)
+        let iframeFocused = false;
+
+        window.addEventListener('blur', function() {
+            if (document.activeElement === document.getElementById('stealth-frame')) {
+                iframeFocused = true;
+            }
+        });
+
+        // 사용자가 화면 아무 곳이나 마우스를 다시 가져오면 포커스를 최상위 창으로 복구
+        window.addEventListener('mousemove', function() {
+            if (iframeFocused) {
+                window.focus();
+                iframeFocused = false;
+            }
+        });
+    </script>
+
+    <script src="songs.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
