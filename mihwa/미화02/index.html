@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>시내버스 LED 안내전광판</title>
+    <title>시내버스 통합 안내전광판 시스템</title>
     <!-- 둥근모꼴 웹폰트 -->
     <link href="https://hangeul.pstatic.net/hangeul_font/css/dunggeunmo.css" rel="stylesheet">
     <style>
@@ -14,85 +14,71 @@
         }
 
         body {
-            background-color: #222;
+            background-color: #1a1a1a;
             color: #fff;
             font-family: 'DungGeunMo', monospace;
             min-height: 100vh;
             padding: 20px;
+            overflow-x: hidden;
         }
 
-        /* 컨트롤 패널 및 하단 정보 레이아웃 */
-        .main-container {
+        /* 1. 좌측 영역 (content3.html: GBUS TV 안내판) */
+        .top-left-section {
+            position: fixed;
+            top: 20px;
+            right: 982px;
+            width: 720px;
+            height: 546px;
+            z-index: 9998;
+        }
+
+        .content3-frame {
             width: 100%;
-            max-width: calc(100% - 400px); /* 우측 노선도 공간 확보 */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 80vh;
-            gap: 0px;
+            height: 100%;
+            border: none;
+            background: transparent;
+            border-radius: 12px;
         }
 
-        .control-panel {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        button {
-            background-color: #111;
-            color: #00ff00;
-            border: 2px solid #00ff00;
-            font-family: 'DungGeunMo', monospace;
-            padding: 10px 15px;
-            font-size: 14px;
-            cursor: pointer;
-            border-radius: 4px;
-            transition: all 0.2s;
-        }
-
-        button:hover {
-            background-color: #00ff00;
-            color: #000;
-        }
-
-        button.active {
-            background-color: #00ff00;
-            color: #000;
-        }
-
-        .status-text {
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-        }
-
+        /* 2. 우측 상단 영역 */
         .top-right-section {
             position: fixed;
             top: 20px;
             right: 340px;
-            width: 630px; /* 기존 고정 너비 유지 */
+            width: 630px;
             display: flex;
             flex-direction: column;
-            gap: 10px;
+            gap: 12px;
             z-index: 9998;
+            max-height: calc(100vh - 120px);
+            overflow-y: auto;
+            padding-right: 5px;
         }
 
+        .top-right-section::-webkit-scrollbar {
+            width: 4px;
+        }
+        .top-right-section::-webkit-scrollbar-thumb {
+            background: #444;
+            border-radius: 2px;
+        }
+
+        /* 기존 LED 전광판 */
         .led-board {
             width: 100%;
-            height: 220px;
+            height: 180px;
             background-color: #000;
-            border: 5px solid #fff;
-            border-radius: 4px;
-            padding: 20px 25px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            border: 4px solid #fff;
+            border-radius: 6px;
+            padding: 15px 20px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.8);
             position: relative;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            flex-shrink: 0;
         }
 
         .led-top-bar {
@@ -102,7 +88,7 @@
             right: 15px;
             display: flex;
             justify-content: space-between;
-            font-size: 12px;
+            font-size: 13px;
             color: #ffaa00;
         }
 
@@ -112,9 +98,9 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 10px;
+            gap: 6px;
             text-align: center;
-            margin-top: 15px;
+            margin-top: 10px;
         }
 
         .label-tag {
@@ -156,30 +142,81 @@
             100% { transform: translateX(var(--scroll-end, -100px)); }
         }
 
-        .top-right-section {
-            position: fixed;
-            top: 20px;
-            right: 340px;
-            width: 630px; /* 기존 고정 너비 유지 */
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 9998;
-        }
-
-        /* iframe 높이를 354px로 맞춰 16:9 비율 공간 확보 */
+        /* 티머니 단말기 */
         .sub-content-frame {
             width: 100%;
-            height: 354px; 
+            height: 354px;
             border: none;
             background: transparent;
             border-radius: 8px;
-            overflow: hidden;
+            flex-shrink: 0;
         }
 
-        /* ========================================================
-           2. 화면 맨 오른쪽 독립 노선도 CSS
-           ======================================================== */
+        /* 4:1 도트 LED 전광판 */
+        .sub-content2-frame {
+            width: 100%;
+            height: 158px;
+            border: none;
+            background: transparent;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        /* 3. 하단 컨트롤러 */
+        .bottom-control-container {
+            position: fixed;
+            bottom: 20px;
+            left: calc(50% - 170px);
+            transform: translateX(-50%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            z-index: 9999;
+            background-color: rgba(20, 20, 20, 0.85);
+            padding: 12px 24px;
+            border-radius: 12px;
+            border: 1px solid #444;
+            backdrop-filter: blur(5px);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #111;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            font-family: 'DungGeunMo', monospace;
+            padding: 10px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #00ff00;
+            color: #000;
+        }
+
+        button.active {
+            background-color: #00ff00;
+            color: #000;
+        }
+
+        .status-text {
+            font-size: 13px;
+            color: #aaa;
+            text-align: center;
+        }
+
+        /* 4. 실시간 노선도 */
         .bus-app-route-panel {
             position: fixed;
             top: 0;
@@ -313,9 +350,14 @@
 </head>
 <body>
 
-    <!-- 오른쪽 위 섹션 (전광판 + 그 바로 아래 외부 HTML) -->
+    <!-- 1. 좌측 영역 (content3.html GBUS TV) -->
+    <div class="top-left-section">
+        <iframe src="content3.html" class="content3-frame" id="subFrame3"></iframe>
+    </div>
+
+    <!-- 2. 우측 영역 -->
     <div class="top-right-section">
-        <!-- 1. 기존 LED 전광판 -->
+        <!-- 기존 LED 전광판 -->
         <div class="led-board">
             <div class="led-top-bar">
                 <span id="boardBusNum">NO. ---</span>
@@ -330,12 +372,15 @@
             </div>
         </div>
 
-        <!-- 2. 🆕 전광판 바로 아래에 독립적으로 불려올 외부 HTML 파일 -->
+        <!-- 티머니 운전석 단말기 -->
         <iframe src="sub_content.html" class="sub-content-frame" id="subFrame"></iframe>
+
+        <!-- 4:1 도트 LED 전광판 -->
+        <iframe src="sub_content2.html" class="sub-content2-frame" id="subFrame2"></iframe>
     </div>
 
-    <!-- 메인 컨트롤 영역 -->
-    <div class="main-container">
+    <!-- 3. 하단 조작 패널 -->
+    <div class="bottom-control-container">
         <div class="control-panel">
             <button id="prevBtn">◀ 이전</button>
             <button id="playBtn">▶ 재생 / 다음</button>
@@ -345,7 +390,7 @@
         <div id="sequenceInfo" class="status-text">시퀀스: 0 / 0</div>
     </div>
 
-    <!-- 맨 우측 독립 노선도 -->
+    <!-- 4. 실시간 노선도 -->
     <div class="bus-app-route-panel">
         <div class="bus-app-header">
             <span class="bus-app-title" id="appBusTitle">실시간 노선도</span>
@@ -383,6 +428,59 @@
                 boardState.innerText = "stop.js 로드 실패";
             }
         }
+
+        // GBUS TV 전용 데이터 전송 (currentIndex 고정값 이용)
+        function updateGBUSTVFrame() {
+            const subFrame3 = document.getElementById('subFrame3');
+            if (!subFrame3 || !subFrame3.contentWindow) return;
+            if (!busConfig || !busConfig.sequence || !busConfig.sequence.length) return;
+
+            const prevSeq = busConfig.sequence[currentIndex - 1];
+            const currSeq = busConfig.sequence[currentIndex];
+            const nextSeq = busConfig.sequence[currentIndex + 1];
+
+            const prevStation = prevSeq ? stationDB[prevSeq.current] : null;
+            const currStation = currSeq ? stationDB[currSeq.current] : null;
+            const nextStation = nextSeq ? stationDB[nextSeq.current] : null;
+
+            subFrame3.contentWindow.postMessage({
+                type: 'UPDATE_GBUS_STATION',
+                prevName: prevStation ? prevStation.name : '기점 (첫 정류장)',
+                currName: currStation ? currStation.name : '---',
+                nextName: nextStation ? nextStation.name : '종점 (마지막 정류장)'
+            }, '*');
+        }
+
+        // iframe 데이터 동기화
+        function syncFrames(label, name) {
+            const subFrame = document.getElementById('subFrame');
+            const subFrame2 = document.getElementById('subFrame2');
+
+            if (subFrame && subFrame.contentWindow) {
+                subFrame.contentWindow.postMessage({
+                    type: 'UPDATE_STATION',
+                    busNumber: busConfig ? busConfig.busNumber : '---',
+                    stationName: name
+                }, '*');
+            }
+
+            if (subFrame2 && subFrame2.contentWindow) {
+                subFrame2.contentWindow.postMessage({
+                    type: 'UPDATE_LED2',
+                    label: label,
+                    stationName: name
+                }, '*');
+            }
+
+            // TV 안내판은 변하지 않도록 실제 위치 기준으로 업데이트
+            updateGBUSTVFrame();
+        }
+
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'REQUEST_TV_INIT') {
+                updateGBUSTVFrame();
+            }
+        });
 
         function setStationText(text) {
             displayStationName.innerText = text;
@@ -422,6 +520,7 @@
             if (currStation) {
                 displayLabel.innerText = "이번정류소";
                 setStationText(currStation.name);
+                syncFrames("이번정류소", currStation.name);
             }
 
             updateStandaloneAppRoute(currentIndex);
@@ -443,19 +542,19 @@
 
             displayLabel.innerText = "이번정류소";
             setStationText(currStation.name);
+            syncFrames("이번정류소", currStation.name);
 
             stepTimer = setTimeout(() => {
                 displayLabel.innerText = "다음정류소";
-                if (nextStation) {
-                    setStationText(nextStation.name);
-                } else {
-                    setStationText("마지막 정류소");
-                }
+                const nextName = nextStation ? nextStation.name : "마지막 정류소";
+                setStationText(nextName);
+                syncFrames("다음정류소", nextName);
 
                 stepTimer = setTimeout(() => {
-                    if (currStation.englishName) {
+                    if (currStation && currStation.englishName) {
                         displayLabel.innerText = "This Stop";
                         setStationText(currStation.englishName);
+                        syncFrames("This Stop", currStation.englishName);
                         
                         stepTimer = setTimeout(() => {
                             loopRandomNotices();
@@ -479,6 +578,7 @@
 
                 displayLabel.innerText = "안내사항";
                 setStationText(randomNotice);
+                syncFrames("안내사항", randomNotice);
 
                 stepTimer = setTimeout(() => {
                     loopRandomNotices(); 
@@ -529,11 +629,9 @@
             }
         };
 
+        // 🔘 재생/다음 버튼 수정: 함수 실행 전에 index 증가 금지!
         playBtn.addEventListener('click', () => {
             playCurrentSequence();
-            if (currentIndex < busConfig.sequence.length - 1) {
-                currentIndex++;
-            }
         });
 
         prevBtn.addEventListener('click', () => {
@@ -626,80 +724,6 @@
         }
 
         window.onload = initBoard;
-        // stop.js에서 정의한 busConfig 및 stationDB가 전역(window)에 위치하는지 확인
-        window.onload = function() {
-            initBoard();
-        };
-
-        function showStaticCurrent() {
-            // stationDB 및 busConfig 존재 체크
-            if (typeof busConfig === 'undefined' || typeof stationDB === 'undefined') {
-                console.error("stop.js가 제대로 로드되지 않았습니다.");
-                return;
-            }
-
-            if (!busConfig.sequence || busConfig.sequence.length === 0) return;
-
-            const seq = busConfig.sequence[currentIndex];
-            const currStation = stationDB[seq.current];
-
-            boardBusNum.innerText = `NO. ${busConfig.busNumber}`;
-            sequenceInfo.innerText = `시퀀스: ${currentIndex + 1} / ${busConfig.sequence.length}`;
-
-            if (currStation) {
-                displayLabel.innerText = "이번정류소";
-                setStationText(currStation.name);
-            }
-
-            updateStandaloneAppRoute(currentIndex);
-            
-            // 🆕 iframe(티머니 단말기)으로 현재 정류장 정보 전송
-            const subFrame = document.getElementById('subFrame');
-            if (subFrame && subFrame.contentWindow) {
-                try {
-                    subFrame.contentWindow.updateFromParent(busConfig.busNumber, currStation ? currStation.name : '');
-                } catch(e) {
-                    console.log("iframe 통신 중...", e);
-                }
-            }
-        }
-        // 🆕 iframe으로 현재 정류장 데이터를 안전하게 보낼 함수
-        function sendStationToIframe() {
-            if (typeof busConfig === 'undefined' || typeof stationDB === 'undefined') return;
-            if (!busConfig.sequence || busConfig.sequence.length === 0) return;
-
-            const seq = busConfig.sequence[currentIndex];
-            const currStation = stationDB[seq.current];
-
-            const subFrame = document.getElementById('subFrame');
-            if (subFrame && subFrame.contentWindow) {
-                subFrame.contentWindow.postMessage({
-                    type: 'UPDATE_STATION',
-                    busNumber: busConfig.busNumber || '---',
-                    stationName: currStation ? currStation.name : '정류장 없음'
-                }, '*');
-            }
-        }
-
-        // 기존 showStaticCurrent 함수 수정
-        function showStaticCurrent() {
-            if (!busConfig || !busConfig.sequence.length) return;
-            const seq = busConfig.sequence[currentIndex];
-            const currStation = stationDB[seq.current];
-
-            boardBusNum.innerText = `NO. ${busConfig.busNumber}`;
-            sequenceInfo.innerText = `시퀀스: ${currentIndex + 1} / ${busConfig.sequence.length}`;
-
-            if (currStation) {
-                displayLabel.innerText = "이번정류소";
-                setStationText(currStation.name);
-            }
-
-            updateStandaloneAppRoute(currentIndex);
-
-            // 💡 정류장이 바뀔 때마다 iframe으로 데이터 전송
-            sendStationToIframe();
-        }
     </script>
 </body>
 </html>
