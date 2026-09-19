@@ -58,7 +58,7 @@
             right: 15px;
             display: flex;
             justify-content: space-between;
-            font-size: 0px;
+            font-size: 14px;
             color: #ffaa00;
         }
 
@@ -71,12 +71,12 @@
             justify-content: center;
             gap: 10px;
             text-align: center;
-            margin-top: -5px;
+            margin-top: 15px;
         }
 
         /* 초록색 라벨 */
         .label-tag {
-            font-size: 84px;
+            font-size: 40px;
             color: #00ff00;
             text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
             letter-spacing: -1px;
@@ -101,17 +101,16 @@
 
         /* 흰색 정류장 명 메인 텍스트 */
         .station-main {
-            font-size: 84px;
+            font-size: 60px;
             color: #ffffff;
             text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
             display: inline-block;
         }
 
-        /* 기존 .station-main.scrolling CSS를 아래와 같이 변경 */
+        /* 7글자 초과 시 일정한 속도로 끝까지 슬라이딩 후 정지 */
         .station-main.scrolling {
             position: absolute;
             left: 0;
-            /* animation은 JS에서 동적으로 주입합니다 */
         }
 
         @keyframes slideToRightEnd {
@@ -187,7 +186,7 @@
     </div>
 
     <!-- stop.js 불러오기 -->
-    <script src="stop.js?v=2.7"></script>
+    <script src="stop.js?v=2.8"></script>
     <script>
         let currentIndex = 0;
         let stepTimer = null;
@@ -215,39 +214,34 @@
             }
         }
 
-function setStationText(text) {
-    displayStationName.innerText = text;
-    
-    displayStationName.style.animation = 'none';
-    displayStationName.offsetHeight; 
-
-    if (text.length > 7) {
-        stationContainer.classList.add('scrolling-active');
-        displayStationName.classList.add('scrolling');
-
-        setTimeout(() => {
-            const textWidth = displayStationName.offsetWidth;
-            const containerWidth = stationContainer.offsetWidth;
-            const distance = containerWidth - textWidth; // 음수 값 (움직여야 할 총 거리)
+        // 텍스트 설정 및 7글자 초과 시 일정한 속도로 슬라이딩
+        function setStationText(text) {
+            displayStationName.innerText = text;
             
-            if (distance < 0) {
-                // 핵심: 이동 거리에 비례해서 시간이 늘어나도록 설정 (속도를 일정하게 유지)
-                // 초당 약 70~80픽셀 정도의 속도로 움직이도록 계산 (숫자가 작을수록 느려짐)
-                const speed = 75; 
-                const duration = Math.abs(distance) / speed; 
+            displayStationName.style.animation = 'none';
+            displayStationName.offsetHeight; 
 
-                // 동적으로 keyframe 스타일을 생성하거나 duration 적용
-                displayStationName.style.animation = `slideToRightEnd ${duration}s linear forwards`;
-                displayStationName.style.setProperty('--scroll-end', `${distance}px`);
+            if (text.length > 7) {
+                stationContainer.classList.add('scrolling-active');
+                displayStationName.classList.add('scrolling');
+
+                setTimeout(() => {
+                    const textWidth = displayStationName.offsetWidth;
+                    const containerWidth = stationContainer.offsetWidth;
+                    const distance = containerWidth - textWidth;
+                    
+                    if (distance < 0) {
+                        const speed = 75; // 초당 이동 픽셀 (속도 유지)
+                        const duration = Math.abs(distance) / speed; 
+                        displayStationName.style.animation = `slideToRightEnd ${duration}s linear forwards`;
+                        displayStationName.style.setProperty('--scroll-end', `${distance}px`);
+                    }
+                }, 10);
+            } else {
+                stationContainer.classList.remove('scrolling-active');
+                displayStationName.classList.remove('scrolling');
             }
-        }, 10);
-    } else {
-        stationContainer.classList.remove('scrolling-active');
-        displayStationName.classList.remove('scrolling');
-    }
-}
-
-// @keyframes 정의는 그대로 두세요
+        }
 
         function showStaticCurrent() {
             if (!busConfig || !busConfig.sequence.length) return;
@@ -263,10 +257,14 @@ function setStationText(text) {
             }
         }
 
-        // 현재 정류소에서 멈춰서 순환하는 사이클 (이번 -> 다음 -> 영어 -> 랜덤 안내사항 무한 반복)
+        // 현재 정류소 사이클 시작 (이번 -> 다음 -> 영어 -> 랜덤 안내사항)
         function startSequenceCycle() {
             if (!busConfig || !busConfig.sequence.length) return;
-            if (stepTimer) clearTimeout(stepTimer);
+            
+            if (stepTimer) {
+                clearTimeout(stepTimer);
+                stepTimer = null;
+            }
 
             const seq = busConfig.sequence[currentIndex];
             const currStation = stationDB[seq.current];
@@ -303,8 +301,13 @@ function setStationText(text) {
             }, 4000);
         }
 
-        // 안내사항을 랜덤으로 계속 교체하며 무한 대기하는 함수 (글자수 * 0.5초, 최소 3초 보장)
+        // 안내사항을 랜덤으로 교체하며 7초간 대기하는 함수
         function loopRandomNotices() {
+            if (stepTimer) {
+                clearTimeout(stepTimer);
+                stepTimer = null;
+            }
+
             if (typeof noticePool !== 'undefined' && noticePool.length > 0) {
                 const randomIndex = Math.floor(Math.random() * noticePool.length);
                 const randomNotice = noticePool[randomIndex];
@@ -312,14 +315,11 @@ function setStationText(text) {
                 displayLabel.innerText = "안내사항";
                 setStationText(randomNotice);
 
-                // 글자 수 * 0.5초 계산 (단, 최소 3초는 보장)
-                let waitTime = Math.max(randomNotice.length * 500, 3000);
-
+                // 요청하신 안내사항 총 슬라이드(대기) 시간 7초 고정
                 stepTimer = setTimeout(() => {
-                    loopRandomNotices(); // 다음 랜덤 안내사항으로 교체
-                }, waitTime);
+                    loopRandomNotices(); 
+                }, 7000);
             } else {
-                // 안내사항 풀이 없을 경우 다시 처음부터 반복
                 startSequenceCycle();
             }
         }
@@ -327,22 +327,33 @@ function setStationText(text) {
         function playCurrentSequence() {
             if (!busConfig || !busConfig.sequence.length) return;
 
-            if (stepTimer) clearTimeout(stepTimer);
+            if (stepTimer) {
+                clearTimeout(stepTimer);
+                stepTimer = null;
+            }
             showStaticCurrent();
 
             const seq = busConfig.sequence[currentIndex];
             
             if (seq.audio) {
+                // 대소문자(.mp3 / .MP3) 양쪽 모두 에러 없이 대응하기 위한 처리
                 audioPlayer.src = seq.audio;
                 audioPlayer.play().catch(e => {
-                    console.log("오디오 재생 오류:", e);
+                    // 소문자 실패 시 대문자(.MP3)로 한 번 더 자동 재시도
+                    if (seq.audio.endsWith('.mp3')) {
+                        audioPlayer.src = seq.audio.replace('.mp3', '.MP3');
+                        audioPlayer.play().catch(err => console.log("오디오 재생 오류:", err));
+                    } else if (seq.audio.endsWith('.MP3')) {
+                        audioPlayer.src = seq.audio.replace('.MP3', '.mp3');
+                        audioPlayer.play().catch(err => console.log("오디오 재생 오류:", err));
+                    }
                 });
             }
 
             startSequenceCycle();
         }
 
-        // [자동 재생(AUTO)이 켜져 있을 때만] 오디오 종료 1초 후 다음 정류소로 이동
+        // 자동 재생(AUTO)이 켜져 있을 때만 오디오 종료 1초 후 다음 정류소로 이동
         audioPlayer.onended = () => {
             if (autoPlayEnabled) {
                 setTimeout(() => {
@@ -366,7 +377,10 @@ function setStationText(text) {
 
         prevBtn.addEventListener('click', () => {
             audioPlayer.pause();
-            if (stepTimer) clearTimeout(stepTimer);
+            if (stepTimer) {
+                clearTimeout(stepTimer);
+                stepTimer = null;
+            }
             if (currentIndex > 0) {
                 currentIndex--;
             }
@@ -387,7 +401,10 @@ function setStationText(text) {
 
         resetBtn.addEventListener('click', () => {
             audioPlayer.pause();
-            if (stepTimer) clearTimeout(stepTimer);
+            if (stepTimer) {
+                clearTimeout(stepTimer);
+                stepTimer = null;
+            }
             currentIndex = 0;
             showStaticCurrent();
             boardState.innerText = "대기중";
