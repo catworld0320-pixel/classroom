@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>시내버스 LED 안내전광판</title>
+    <!-- 둥근모꼴 웹폰트 -->
+    <link href="https://hangeul.pstatic.net/hangeul_font/css/dunggeunmo.css" rel="stylesheet">
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: #222;
+            color: #fff;
+            font-family: 'DungGeunMo', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 650px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        /* LED 전광판 프레임 */
+        .led-board {
+            width: 100%;
+            height: 220px;
+            background-color: #000;
+            border: 5px solid #fff;
+            border-radius: 4px;
+            padding: 20px 25px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* 상단 노선 상태바 */
+        .led-top-bar {
+            position: absolute;
+            top: 5px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0px;
+            color: #ffaa00;
+        }
+
+        /* 중앙 안내 표시 영역 */
+        .row-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            margin-top: -5px;
+        }
+
+        /* 초록색 라벨 */
+        .label-tag {
+            font-size: 84px;
+            color: #00ff00;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+            letter-spacing: -1px;
+        }
+
+        /* 정류장 이름 컨테이너 (기본 가운데 정렬) */
+        .station-container {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            height: 84px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* 7글자 초과 시 왼쪽 정렬로 변경 */
+        .station-container.scrolling-active {
+            justify-content: flex-start;
+        }
+
+        /* 흰색 정류장 명 메인 텍스트 */
+        .station-main {
+            font-size: 84px;
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+            display: inline-block;
+        }
+
+        /* 7글자 초과 시 글자 끝이 오른쪽에 닿을 때까지 한 번만 슬라이딩 */
+        .station-main.scrolling {
+            position: absolute;
+            left: 0;
+            animation: slideToRightEnd 3s linear forwards;
+        }
+
+        @keyframes slideToRightEnd {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(var(--scroll-end, -100px)); }
+        }
+
+        /* 컨트롤 패널 버튼 */
+        .control-panel {
+            display: flex;
+            gap: 10px;
+            width: 100%;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        button {
+            background-color: #111;
+            color: #00ff00;
+            border: 2px solid #00ff00;
+            font-family: 'DungGeunMo', monospace;
+            padding: 10px 15px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background-color: #00ff00;
+            color: #000;
+        }
+
+        button.active {
+            background-color: #00ff00;
+            color: #000;
+        }
+
+        .status-text {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- LED 전광판 본체 -->
+        <div class="led-board">
+            <div class="led-top-bar">
+                <span id="boardBusNum">NO. ---</span>
+                <span id="boardState">대기중</span>
+            </div>
+
+            <!-- 안내 표시 영역 -->
+            <div class="row-group">
+                <div class="label-tag" id="displayLabel">이번정류소</div>
+                <div class="station-container" id="stationContainer">
+                    <div id="displayStationName" class="station-main">준비중</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 플레이어 버튼 -->
+        <div class="control-panel">
+            <button id="prevBtn">◀ 이전</button>
+            <button id="playBtn">▶ 재생 / 다음</button>
+            <button id="autoBtn">자동 재생: OFF</button>
+            <button id="resetBtn">⏹ 처음으로</button>
+        </div>
+        <div id="sequenceInfo" class="status-text">시퀀스: 0 / 0</div>
+    </div>
+
+    <!-- stop.js 불러오기 -->
+    <script src="stop.js?v=2.7"></script>
+    <script>
+        let currentIndex = 0;
+        let stepTimer = null;
+        let autoPlayEnabled = false;
+        const audioPlayer = new Audio();
+
+        const boardBusNum = document.getElementById('boardBusNum');
+        const boardState = document.getElementById('boardState');
+        const displayLabel = document.getElementById('displayLabel');
+        const displayStationName = document.getElementById('displayStationName');
+        const stationContainer = document.getElementById('stationContainer');
+        const sequenceInfo = document.getElementById('sequenceInfo');
+
+        const playBtn = document.getElementById('playBtn');
+        const prevBtn = document.getElementById('prevBtn');
+        const autoBtn = document.getElementById('autoBtn');
+        const resetBtn = document.getElementById('resetBtn');
+
+        function initBoard() {
+            if (typeof busConfig !== 'undefined') {
+                boardBusNum.innerText = `NO. ${busConfig.busNumber}`;
+                showStaticCurrent();
+            } else {
+                boardState.innerText = "stop.js 로드 실패";
+            }
+        }
+
+        // 텍스트 설정 및 7글자 초과 시 슬라이딩 거리 계산 함수
+        function setStationText(text) {
+            displayStationName.innerText = text;
+            
+            displayStationName.style.animation = 'none';
+            displayStationName.offsetHeight; 
+
+            if (text.length > 7) {
+                stationContainer.classList.add('scrolling-active');
+                displayStationName.classList.add('scrolling');
+
+                setTimeout(() => {
+                    const textWidth = displayStationName.offsetWidth;
+                    const containerWidth = stationContainer.offsetWidth;
+                    const distance = containerWidth - textWidth;
+                    
+                    if (distance < 0) {
+                        displayStationName.style.setProperty('--scroll-end', `${distance}px`);
+                        displayStationName.style.animation = 'slideToRightEnd 3s linear forwards';
+                    }
+                }, 10);
+            } else {
+                stationContainer.classList.remove('scrolling-active');
+                displayStationName.classList.remove('scrolling');
+            }
+        }
+
+        function showStaticCurrent() {
+            if (!busConfig || !busConfig.sequence.length) return;
+            const seq = busConfig.sequence[currentIndex];
+            const currStation = stationDB[seq.current];
+
+            boardBusNum.innerText = `NO. ${busConfig.busNumber}`;
+            sequenceInfo.innerText = `시퀀스: ${currentIndex + 1} / ${busConfig.sequence.length}`;
+
+            if (currStation) {
+                displayLabel.innerText = "이번정류소";
+                setStationText(currStation.name);
+            }
+        }
+
+        // 현재 정류소에서 멈춰서 순환하는 사이클 (이번 -> 다음 -> 영어 -> 랜덤 안내사항 무한 반복)
+        function startSequenceCycle() {
+            if (!busConfig || !busConfig.sequence.length) return;
+            if (stepTimer) clearTimeout(stepTimer);
+
+            const seq = busConfig.sequence[currentIndex];
+            const currStation = stationDB[seq.current];
+            const nextStation = seq.next ? stationDB[seq.next] : null;
+
+            boardState.innerText = "안내중";
+
+            // 1단계: 이번정류소 (4초)
+            displayLabel.innerText = "이번정류소";
+            setStationText(currStation.name);
+
+            stepTimer = setTimeout(() => {
+                // 2단계: 다음정류소 (4초)
+                displayLabel.innerText = "다음정류소";
+                if (nextStation) {
+                    setStationText(nextStation.name);
+                } else {
+                    setStationText("마지막 정류소");
+                }
+
+                stepTimer = setTimeout(() => {
+                    // 3단계: 영어명 (존재하는 경우 4초)
+                    if (currStation.englishName) {
+                        displayLabel.innerText = "This Stop";
+                        setStationText(currStation.englishName);
+                        
+                        stepTimer = setTimeout(() => {
+                            loopRandomNotices();
+                        }, 4000);
+                    } else {
+                        loopRandomNotices();
+                    }
+                }, 4000);
+            }, 4000);
+        }
+
+        // 안내사항을 랜덤으로 계속 교체하며 무한 대기하는 함수 (글자수 * 0.5초, 최소 3초 보장)
+        function loopRandomNotices() {
+            if (typeof noticePool !== 'undefined' && noticePool.length > 0) {
+                const randomIndex = Math.floor(Math.random() * noticePool.length);
+                const randomNotice = noticePool[randomIndex];
+
+                displayLabel.innerText = "안내사항";
+                setStationText(randomNotice);
+
+                // 글자 수 * 0.5초 계산 (단, 최소 3초는 보장)
+                let waitTime = Math.max(randomNotice.length * 500, 3000);
+
+                stepTimer = setTimeout(() => {
+                    loopRandomNotices(); // 다음 랜덤 안내사항으로 교체
+                }, waitTime);
+            } else {
+                // 안내사항 풀이 없을 경우 다시 처음부터 반복
+                startSequenceCycle();
+            }
+        }
+
+        function playCurrentSequence() {
+            if (!busConfig || !busConfig.sequence.length) return;
+
+            if (stepTimer) clearTimeout(stepTimer);
+            showStaticCurrent();
+
+            const seq = busConfig.sequence[currentIndex];
+            
+            if (seq.audio) {
+                audioPlayer.src = seq.audio;
+                audioPlayer.play().catch(e => {
+                    console.log("오디오 재생 오류:", e);
+                });
+            }
+
+            startSequenceCycle();
+        }
+
+        // [자동 재생(AUTO)이 켜져 있을 때만] 오디오 종료 1초 후 다음 정류소로 이동
+        audioPlayer.onended = () => {
+            if (autoPlayEnabled) {
+                setTimeout(() => {
+                    if (currentIndex < busConfig.sequence.length - 1) {
+                        currentIndex++;
+                        playCurrentSequence();
+                    } else {
+                        currentIndex = 0;
+                        playCurrentSequence();
+                    }
+                }, 1000);
+            }
+        };
+
+        playBtn.addEventListener('click', () => {
+            playCurrentSequence();
+            if (currentIndex < busConfig.sequence.length - 1) {
+                currentIndex++;
+            }
+        });
+
+        prevBtn.addEventListener('click', () => {
+            audioPlayer.pause();
+            if (stepTimer) clearTimeout(stepTimer);
+            if (currentIndex > 0) {
+                currentIndex--;
+            }
+            showStaticCurrent();
+            boardState.innerText = "대기중";
+        });
+
+        autoBtn.addEventListener('click', () => {
+            autoPlayEnabled = !autoPlayEnabled;
+            if (autoPlayEnabled) {
+                autoBtn.innerText = "자동 재생: ON";
+                autoBtn.classList.add('active');
+            } else {
+                autoBtn.innerText = "자동 재생: OFF";
+                autoBtn.classList.remove('active');
+            }
+        });
+
+        resetBtn.addEventListener('click', () => {
+            audioPlayer.pause();
+            if (stepTimer) clearTimeout(stepTimer);
+            currentIndex = 0;
+            showStaticCurrent();
+            boardState.innerText = "대기중";
+        });
+
+        window.onload = initBoard;
+    </script>
+</body>
+</html>
