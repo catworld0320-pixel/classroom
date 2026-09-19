@@ -472,42 +472,49 @@
         const stationNameEl = document.getElementById('currentStationName');
         const busRouteNoEl = document.getElementById('busRouteNo');
 
-        // 화면 갱신 전용 함수
         function updateUI(busNum, stName) {
             if (busNum) busRouteNoEl.innerText = `${busNum}번`;
             if (stName) stationNameEl.innerText = stName;
         }
 
-        // 1. postMessage 메시지 수신 (가장 확실함)
+        // 1. postMessage 방식 수신 (UPDATE_SUB_STATION 또는 UPDATE_STATION 모두 지원)
         window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'UPDATE_STATION') {
-                updateUI(event.data.busNumber, event.data.stationName);
+            if (event.data) {
+                if (event.data.type === 'UPDATE_SUB_STATION' || event.data.type === 'UPDATE_STATION') {
+                    updateUI(event.data.busNumber, event.data.stationName);
+                }
             }
         });
 
-        // 2. 직접 참조 방식 (폴백 동기화)
-        function pollParentData() {
+        // 2. 🛡️ 부모 창 데이터 직접 참조 방식 (폴링 백업: "불러오는 중..." 방지)
+        function syncParentDataDirectly() {
             try {
                 const parentWin = window.parent;
                 if (parentWin && parentWin.busConfig && parentWin.stationDB) {
                     const idx = parentWin.currentIndex || 0;
                     const seq = parentWin.busConfig.sequence[idx];
-
                     const busNo = parentWin.busConfig.busNumber || '---';
-                    let stName = '불러오는 중...';
 
                     if (seq && parentWin.stationDB[seq.current]) {
-                        stName = parentWin.stationDB[seq.current].name;
+                        const stName = parentWin.stationDB[seq.current].name;
+                        updateUI(busNo, stName);
                     }
-                    updateUI(busNo, stName);
                 }
             } catch (e) {
-                // 크로스 오리진 제한 등의 에러는 postMessage로 커버됨
+                // 크로스오리진 보안 에러 발생 시 postMessage가 커버함
             }
         }
 
-        setInterval(pollParentData, 200);
-        window.onload = pollParentData;
+        // 0.1초마다 부모 창 데이터를 감시하여 동기화
+        setInterval(syncParentDataDirectly, 100);
+
+        // 로드 완료 시 초기화 신호 전송
+        window.onload = () => {
+            syncParentDataDirectly();
+            if (window.parent) {
+                window.parent.postMessage({ type: 'REQUEST_SUB_INIT' }, '*');
+            }
+        };
     </script>
 </body>
 </html>
