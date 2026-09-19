@@ -17,112 +17,25 @@
             background-color: #222;
             color: #fff;
             font-family: 'DungGeunMo', monospace;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
             min-height: 100vh;
+            padding: 20px;
         }
 
-        .container {
-            width: 90%;
-            max-width: 650px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-        }
-
-        /* LED 전광판 프레임 */
-        .led-board {
+        /* 컨트롤 패널 및 하단 정보 레이아웃 */
+        .main-container {
             width: 100%;
-            height: 220px;
-            background-color: #000;
-            border: 5px solid #fff;
-            border-radius: 4px;
-            padding: 20px 25px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.8);
-            position: relative;
+            max-width: calc(100% - 340px); /* 우측 노선도 공간 확보 */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            min-height: 80vh;
+            gap: 15px;
         }
 
-        /* 상단 노선 상태바 */
-        .led-top-bar {
-            position: absolute;
-            top: 5px;
-            left: 15px;
-            right: 15px;
-            display: flex;
-            justify-content: space-between;
-            font-size: 0px;
-            color: #ffaa00;
-        }
-
-        /* 중앙 안내 표시 영역 */
-        .row-group {
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            text-align: center;
-            margin-top: -5px;
-        }
-
-        /* 초록색 라벨 */
-        .label-tag {
-            font-size: 84px;
-            color: #00ff00;
-            text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
-            letter-spacing: -1px;
-        }
-
-        /* 정류장 이름 컨테이너 (기본 가운데 정렬) */
-        .station-container {
-            width: 100%;
-            overflow: hidden;
-            white-space: nowrap;
-            position: relative;
-            height: 84px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* 7글자 초과 시 왼쪽 정렬로 변경 */
-        .station-container.scrolling-active {
-            justify-content: flex-start;
-        }
-
-        /* 흰색 정류장 명 메인 텍스트 */
-        .station-main {
-            font-size: 84px;
-            color: #ffffff;
-            text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
-            display: inline-block;
-        }
-
-        /* 7글자 초과 시 일정한 속도로 끝까지 슬라이딩 후 정지 */
-        .station-main.scrolling {
-            position: absolute;
-            left: 0;
-        }
-
-        @keyframes slideToRightEnd {
-            0% { transform: translateX(0); }
-            100% { transform: translateX(var(--scroll-end, -100px)); }
-        }
-
-        /* 컨트롤 패널 버튼 */
         .control-panel {
             display: flex;
             gap: 10px;
-            width: 100%;
             justify-content: center;
             flex-wrap: wrap;
         }
@@ -154,19 +67,251 @@
             color: #888;
             text-align: center;
         }
+
+        /* ========================================================
+           1. 우측 상단 LED 전광판 + 외부 HTML 래퍼 영역
+           ======================================================== */
+        .top-right-section {
+            position: fixed;
+            top: 20px;
+            right: 340px; /* 우측 노선도 바로 옆 */
+            width: 630px; /* 전광판 너비와 동일하게 고정 */
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* 전광판과 밑에 불러올 HTML 간격 */
+            z-index: 9998;
+        }
+
+        .led-board {
+            width: 100%;
+            height: 220px;
+            background-color: #000;
+            border: 5px solid #fff;
+            border-radius: 4px;
+            padding: 20px 25px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .led-top-bar {
+            position: absolute;
+            top: 5px;
+            left: 15px;
+            right: 15px;
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            color: #ffaa00;
+        }
+
+        .row-group {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-align: center;
+            margin-top: 15px;
+        }
+
+        .label-tag {
+            font-size: 40px;
+            color: #00ff00;
+            text-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+            letter-spacing: -1px;
+        }
+
+        .station-container {
+            width: 100%;
+            overflow: hidden;
+            white-space: nowrap;
+            position: relative;
+            height: 84px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .station-container.scrolling-active {
+            justify-content: flex-start;
+        }
+
+        .station-main {
+            font-size: 60px;
+            color: #ffffff;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.4);
+            display: inline-block;
+        }
+
+        .station-main.scrolling {
+            position: absolute;
+            left: 0;
+        }
+
+        @keyframes slideToRightEnd {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(var(--scroll-end, -100px)); }
+        }
+
+        /* 🆕 전광판 바로 밑에 들어갈 외부 HTML iframe 스타일 */
+        .sub-content-frame {
+            width: 100%;
+            height: 150px; /* 기본 높이 설정 */
+            border: none;
+            background: transparent;
+        }
+
+        /* ========================================================
+           2. 화면 맨 오른쪽 독립 노선도 CSS
+           ======================================================== */
+        .bus-app-route-panel {
+            position: fixed;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 320px;
+            height: 100vh;
+            background-color: #ffffff;
+            color: #333333;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            z-index: 9999;
+        }
+
+        .bus-app-header {
+            background-color: #f8f9fa;
+            padding: 16px;
+            border-bottom: 1px solid #eeeeee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .bus-app-title {
+            font-size: 16px;
+            font-weight: bold;
+            color: #222;
+        }
+
+        .bus-app-badge {
+            background-color: #2b77f6;
+            color: #fff;
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 500;
+        }
+
+        .bus-app-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px 10px 15px 20px;
+        }
+
+        .bus-app-list-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .bus-app-list-container::-webkit-scrollbar-thumb {
+            background: #ccc;
+            border-radius: 3px;
+        }
+
+        .bus-app-station-row {
+            position: relative;
+            display: flex;
+            align-items: center;
+            min-height: 56px;
+            padding-left: 30px;
+            cursor: pointer;
+        }
+
+        .bus-app-station-row::before {
+            content: '';
+            position: absolute;
+            left: 10px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background-color: #c0e0b0;
+            z-index: 1;
+        }
+
+        .bus-app-station-row:first-child::before { top: 50%; }
+        .bus-app-station-row:last-child::before { bottom: 50%; }
+
+        .bus-app-circle {
+            position: absolute;
+            left: 5px;
+            width: 13px;
+            height: 13px;
+            background-color: #fff;
+            border: 3px solid #84c464;
+            border-radius: 50%;
+            z-index: 2;
+        }
+
+        .bus-app-name {
+            font-size: 14px;
+            color: #444;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            width: 220px;
+        }
+
+        .bus-app-station-row.is-current .bus-app-name {
+            color: #2b77f6;
+            font-weight: bold;
+            font-size: 15px;
+        }
+
+        .bus-app-station-row.is-current .bus-app-circle {
+            background-color: #2b77f6;
+            border-color: #2b77f6;
+            box-shadow: 0 0 0 3px rgba(43, 119, 246, 0.2);
+        }
+
+        .bus-app-icon-badge {
+            display: none;
+            position: absolute;
+            left: -8px;
+            z-index: 3;
+            background-color: #38b653;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-weight: bold;
+            align-items: center;
+        }
+
+        .bus-app-station-row.is-current .bus-app-icon-badge {
+            display: flex;
+        }
     </style>
 </head>
 <body>
 
-    <div class="container">
-        <!-- LED 전광판 본체 -->
+    <!-- 오른쪽 위 섹션 (전광판 + 그 바로 아래 외부 HTML) -->
+    <div class="top-right-section">
+        <!-- 1. 기존 LED 전광판 -->
         <div class="led-board">
             <div class="led-top-bar">
                 <span id="boardBusNum">NO. ---</span>
                 <span id="boardState">대기중</span>
             </div>
 
-            <!-- 안내 표시 영역 -->
             <div class="row-group">
                 <div class="label-tag" id="displayLabel">이번정류소</div>
                 <div class="station-container" id="stationContainer">
@@ -175,7 +320,12 @@
             </div>
         </div>
 
-        <!-- 플레이어 버튼 -->
+        <!-- 2. 🆕 전광판 바로 아래에 독립적으로 불려올 외부 HTML 파일 -->
+        <iframe src="sub_content.html" class="sub-content-frame" id="subFrame"></iframe>
+    </div>
+
+    <!-- 메인 컨트롤 영역 -->
+    <div class="main-container">
         <div class="control-panel">
             <button id="prevBtn">◀ 이전</button>
             <button id="playBtn">▶ 재생 / 다음</button>
@@ -185,8 +335,17 @@
         <div id="sequenceInfo" class="status-text">시퀀스: 0 / 0</div>
     </div>
 
+    <!-- 맨 우측 독립 노선도 -->
+    <div class="bus-app-route-panel">
+        <div class="bus-app-header">
+            <span class="bus-app-title" id="appBusTitle">실시간 노선도</span>
+            <span class="bus-app-badge">운행중</span>
+        </div>
+        <div class="bus-app-list-container" id="appStationList"></div>
+    </div>
+
     <!-- stop.js 불러오기 -->
-    <script src="stop.js?v=2.8"></script>
+    <script src="stop.js?v=7.0"></script>
     <script>
         let currentIndex = 0;
         let stepTimer = null;
@@ -208,16 +367,15 @@
         function initBoard() {
             if (typeof busConfig !== 'undefined') {
                 boardBusNum.innerText = `NO. ${busConfig.busNumber}`;
+                initStandaloneAppRoute();
                 showStaticCurrent();
             } else {
                 boardState.innerText = "stop.js 로드 실패";
             }
         }
 
-        // 텍스트 설정 및 7글자 초과 시 일정한 속도로 슬라이딩
         function setStationText(text) {
             displayStationName.innerText = text;
-            
             displayStationName.style.animation = 'none';
             displayStationName.offsetHeight; 
 
@@ -231,7 +389,7 @@
                     const distance = containerWidth - textWidth;
                     
                     if (distance < 0) {
-                        const speed = 75; // 초당 이동 픽셀 (속도 유지)
+                        const speed = 75; 
                         const duration = Math.abs(distance) / speed; 
                         displayStationName.style.animation = `slideToRightEnd ${duration}s linear forwards`;
                         displayStationName.style.setProperty('--scroll-end', `${distance}px`);
@@ -255,9 +413,10 @@
                 displayLabel.innerText = "이번정류소";
                 setStationText(currStation.name);
             }
+
+            updateStandaloneAppRoute(currentIndex);
         }
 
-        // 현재 정류소 사이클 시작 (이번 -> 다음 -> 영어 -> 랜덤 안내사항)
         function startSequenceCycle() {
             if (!busConfig || !busConfig.sequence.length) return;
             
@@ -272,12 +431,10 @@
 
             boardState.innerText = "안내중";
 
-            // 1단계: 이번정류소 (4초)
             displayLabel.innerText = "이번정류소";
             setStationText(currStation.name);
 
             stepTimer = setTimeout(() => {
-                // 2단계: 다음정류소 (4초)
                 displayLabel.innerText = "다음정류소";
                 if (nextStation) {
                     setStationText(nextStation.name);
@@ -286,7 +443,6 @@
                 }
 
                 stepTimer = setTimeout(() => {
-                    // 3단계: 영어명 (존재하는 경우 4초)
                     if (currStation.englishName) {
                         displayLabel.innerText = "This Stop";
                         setStationText(currStation.englishName);
@@ -301,7 +457,6 @@
             }, 4000);
         }
 
-        // 안내사항을 랜덤으로 교체하며 7초간 대기하는 함수
         function loopRandomNotices() {
             if (stepTimer) {
                 clearTimeout(stepTimer);
@@ -315,7 +470,6 @@
                 displayLabel.innerText = "안내사항";
                 setStationText(randomNotice);
 
-                // 요청하신 안내사항 총 슬라이드(대기) 시간 7초 고정
                 stepTimer = setTimeout(() => {
                     loopRandomNotices(); 
                 }, 7000);
@@ -336,10 +490,8 @@
             const seq = busConfig.sequence[currentIndex];
             
             if (seq.audio) {
-                // 대소문자(.mp3 / .MP3) 양쪽 모두 에러 없이 대응하기 위한 처리
                 audioPlayer.src = seq.audio;
                 audioPlayer.play().catch(e => {
-                    // 소문자 실패 시 대문자(.MP3)로 한 번 더 자동 재시도
                     if (seq.audio.endsWith('.mp3')) {
                         audioPlayer.src = seq.audio.replace('.mp3', '.MP3');
                         audioPlayer.play().catch(err => console.log("오디오 재생 오류:", err));
@@ -353,7 +505,6 @@
             startSequenceCycle();
         }
 
-        // 자동 재생(AUTO)이 켜져 있을 때만 오디오 종료 1초 후 다음 정류소로 이동
         audioPlayer.onended = () => {
             if (autoPlayEnabled) {
                 setTimeout(() => {
@@ -409,6 +560,60 @@
             showStaticCurrent();
             boardState.innerText = "대기중";
         });
+
+        // 독립 노선도 로직
+        const appStationListEl = document.getElementById('appStationList');
+        const appBusTitleEl = document.getElementById('appBusTitle');
+
+        function initStandaloneAppRoute() {
+            if (!appStationListEl || typeof busConfig === 'undefined') return;
+
+            if (busConfig.busNumber) {
+                appBusTitleEl.innerText = `${busConfig.busNumber} 노선도`;
+            }
+
+            appStationListEl.innerHTML = '';
+
+            busConfig.sequence.forEach((seq, idx) => {
+                const station = stationDB[seq.current];
+                if (station) {
+                    const row = document.createElement('div');
+                    row.className = 'bus-app-station-row';
+                    row.id = `standalone-app-row-${idx}`;
+
+                    row.innerHTML = `
+                        <div class="bus-app-circle"></div>
+                        <div class="bus-app-icon-badge">🚌 버스</div>
+                        <div class="bus-app-name">${station.name}</div>
+                    `;
+
+                    row.addEventListener('click', () => {
+                        audioPlayer.pause();
+                        if (stepTimer) {
+                            clearTimeout(stepTimer);
+                            stepTimer = null;
+                        }
+                        currentIndex = idx;
+                        showStaticCurrent();
+                        boardState.innerText = "대기중";
+                    });
+
+                    appStationListEl.appendChild(row);
+                }
+            });
+        }
+
+        function updateStandaloneAppRoute(targetIndex) {
+            const rows = document.querySelectorAll('.bus-app-station-row');
+            rows.forEach((row, idx) => {
+                if (idx === targetIndex) {
+                    row.classList.add('is-current');
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                } else {
+                    row.classList.remove('is-current');
+                }
+            });
+        }
 
         window.onload = initBoard;
     </script>
