@@ -107,11 +107,11 @@
             display: inline-block;
         }
 
-        /* 7글자 초과 시 글자 끝이 오른쪽에 닿을 때까지 한 번만 슬라이딩 */
+        /* 기존 .station-main.scrolling CSS를 아래와 같이 변경 */
         .station-main.scrolling {
             position: absolute;
             left: 0;
-            animation: slideToRightEnd 3s linear forwards;
+            /* animation은 JS에서 동적으로 주입합니다 */
         }
 
         @keyframes slideToRightEnd {
@@ -215,32 +215,39 @@
             }
         }
 
-        // 텍스트 설정 및 7글자 초과 시 슬라이딩 거리 계산 함수
-        function setStationText(text) {
-            displayStationName.innerText = text;
+function setStationText(text) {
+    displayStationName.innerText = text;
+    
+    displayStationName.style.animation = 'none';
+    displayStationName.offsetHeight; 
+
+    if (text.length > 7) {
+        stationContainer.classList.add('scrolling-active');
+        displayStationName.classList.add('scrolling');
+
+        setTimeout(() => {
+            const textWidth = displayStationName.offsetWidth;
+            const containerWidth = stationContainer.offsetWidth;
+            const distance = containerWidth - textWidth; // 음수 값 (움직여야 할 총 거리)
             
-            displayStationName.style.animation = 'none';
-            displayStationName.offsetHeight; 
+            if (distance < 0) {
+                // 핵심: 이동 거리에 비례해서 시간이 늘어나도록 설정 (속도를 일정하게 유지)
+                // 초당 약 70~80픽셀 정도의 속도로 움직이도록 계산 (숫자가 작을수록 느려짐)
+                const speed = 75; 
+                const duration = Math.abs(distance) / speed; 
 
-            if (text.length > 7) {
-                stationContainer.classList.add('scrolling-active');
-                displayStationName.classList.add('scrolling');
-
-                setTimeout(() => {
-                    const textWidth = displayStationName.offsetWidth;
-                    const containerWidth = stationContainer.offsetWidth;
-                    const distance = containerWidth - textWidth;
-                    
-                    if (distance < 0) {
-                        displayStationName.style.setProperty('--scroll-end', `${distance}px`);
-                        displayStationName.style.animation = 'slideToRightEnd 3s linear forwards';
-                    }
-                }, 10);
-            } else {
-                stationContainer.classList.remove('scrolling-active');
-                displayStationName.classList.remove('scrolling');
+                // 동적으로 keyframe 스타일을 생성하거나 duration 적용
+                displayStationName.style.animation = `slideToRightEnd ${duration}s linear forwards`;
+                displayStationName.style.setProperty('--scroll-end', `${distance}px`);
             }
-        }
+        }, 10);
+    } else {
+        stationContainer.classList.remove('scrolling-active');
+        displayStationName.classList.remove('scrolling');
+    }
+}
+
+// @keyframes 정의는 그대로 두세요
 
         function showStaticCurrent() {
             if (!busConfig || !busConfig.sequence.length) return;
