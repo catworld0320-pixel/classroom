@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>티머니 운전석 단말기</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            background-color: #55585b;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        /* 1. 상단 상태바 */
+        .top-bar {
+            height: 38px;
+            background-color: #313334;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            border-bottom: 2px solid #232425;
+            flex-shrink: 0;
+            color: #ffffff;
+        }
+
+        .logo-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .logo-icon {
+            background-color: #e52521;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 1px 4px;
+            border-radius: 3px;
+        }
+
+        .center-btn-group {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pill-btn {
+            background-color: #434648;
+            color: #ffffff;
+            border: 1px solid #5a5d60;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .toggle-switch {
+            width: 36px;
+            height: 18px;
+            background-color: #72767a;
+            border-radius: 9px;
+            position: relative;
+        }
+
+        .toggle-switch::after {
+            content: '';
+            position: absolute;
+            top: 2px;
+            left: 2px;
+            width: 14px;
+            height: 14px;
+            background-color: #b0b4b8;
+            border-radius: 50%;
+        }
+
+        .brightness-control {
+            display: flex;
+            align-items: center;
+            background-color: #434648;
+            border-radius: 12px;
+            padding: 1px 6px;
+            gap: 5px;
+            border: 1px solid #5a5d60;
+            font-size: 10px;
+            color: #00d2d3;
+        }
+
+        .status-icons {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-size: 9px;
+            color: #aaaaaa;
+        }
+
+        .icon-box {
+            border: 1px solid #777;
+            border-radius: 2px;
+            padding: 0 2px;
+        }
+
+        /* 2. 메인 화면 영역 (100% 반응형) */
+        .main-content {
+            flex: 1;
+            display: flex;
+            background-color: #64686c;
+            position: relative;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .route-monitor {
+            flex: 1;
+            position: relative;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .route-axis {
+            position: absolute;
+            left: 48%;
+            top: 0;
+            bottom: 0;
+            width: 4px;
+            background-color: #2ed573;
+            z-index: 1;
+        }
+
+        .axis-node {
+            position: absolute;
+            left: calc(48% - 4px);
+            width: 12px;
+            height: 12px;
+            background-color: #ffffff;
+            border: 3px solid #2ed573;
+            border-radius: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+        }
+
+        .node-top2 { top: 15%; }
+        .node-top1 { top: 32%; }
+        .node-bottom1 { top: 68%; }
+        .node-bottom2 { top: 85%; }
+
+        .bus-gap-card {
+            position: absolute;
+            right: calc(52% + 15px);
+            background-color: rgba(45, 48, 50, 0.9);
+            border: 1px solid #606467;
+            border-radius: 5px;
+            padding: 2px 6px;
+            font-size: 10px;
+            color: #2ed573;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transform: translateY(-50%);
+            z-index: 3;
+            white-space: nowrap;
+        }
+
+        .bus-gap-card::after {
+            content: '';
+            position: absolute;
+            right: -5px;
+            top: 50%;
+            transform: translateY(-50%);
+            border-top: 4px solid transparent;
+            border-bottom: 4px solid transparent;
+            border-left: 5px solid rgba(45, 48, 50, 0.9);
+        }
+
+        .gap-top2 { top: 15%; }
+        .gap-top1 { top: 32%; }
+        .gap-bottom1 { top: 68%; }
+        .gap-bottom2 { top: 85%; }
+
+        .gap-value { color: #ffffff; font-weight: bold; }
+
+        .current-bus-box {
+            position: absolute;
+            left: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: calc(48% - 30px);
+            max-width: 180px;
+            height: 48px;
+            background-color: #1e2022;
+            border: 3px solid #00d284;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            padding: 0 8px;
+            z-index: 4;
+        }
+
+        .bus-front-cap {
+            width: 8px;
+            height: 16px;
+            background-color: #00d284;
+            border-radius: 2px;
+            margin-right: 6px;
+            flex-shrink: 0;
+        }
+
+        .bus-route-no {
+            font-size: 15px;
+            font-weight: 900;
+            color: #00d284;
+            margin-right: 4px;
+            white-space: nowrap;
+        }
+
+        .bus-plate-no {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ffffff;
+            white-space: nowrap;
+        }
+
+        .current-station-node {
+            position: absolute;
+            left: calc(48% - 9px);
+            top: 50%;
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            background-color: #00d284;
+            border: 3px solid #ffffff;
+            border-radius: 50%;
+            z-index: 5;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .current-station-node::after {
+            content: '';
+            width: 0;
+            height: 0;
+            border-left: 4px solid transparent;
+            border-right: 4px solid transparent;
+            border-bottom: 7px solid #ffffff;
+            margin-top: -1px;
+        }
+
+        .current-station-display {
+            position: absolute;
+            left: calc(48% + 20px);
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 5;
+            overflow: hidden;
+        }
+
+        .station-name-text {
+            font-size: 20px;
+            font-weight: bold;
+            color: #ffffff;
+            letter-spacing: -0.5px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .arrow-next-btn {
+            width: 22px;
+            height: 22px;
+            background-color: #83878b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .passenger-status-panel {
+            width: 140px;
+            background-color: #45484a;
+            padding: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            border-left: 2px solid #313334;
+            flex-shrink: 0;
+        }
+
+        .status-card {
+            flex: 1;
+            background-color: #313334;
+            border-radius: 6px;
+            padding: 0 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .check-badge {
+            width: 18px;
+            height: 18px;
+            background-color: #00d284;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 11px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .card-title {
+            font-size: 15px;
+            font-weight: bold;
+            color: #ffffff;
+        }
+
+        /* 3. 하단 요금 버튼 바 */
+        .bottom-action-bar {
+            height: 46px;
+            background-color: #262829;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 8px;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .action-btn {
+            flex: 1;
+            height: 100%;
+            border: none;
+            border-radius: 16px;
+            font-size: 15px;
+            font-weight: bold;
+            color: #ffffff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-cancel { background-color: #ff4757; flex: 1.1; }
+        .btn-fare { background-color: #1e90ff; }
+        .btn-confirm { background-color: #00d284; flex: 1.1; }
+    </style>
+</head>
+<body>
+
+    <!-- 상단 상태바 -->
+    <div class="top-bar">
+        <div class="logo-group">
+            <span class="logo-icon">T</span>
+            <span>T티머니</span>
+            <span style="font-size:10px; margin-left:2px;">🚌 1</span>
+        </div>
+
+        <div class="center-btn-group">
+            <div class="toggle-switch"></div>
+            <div class="pill-btn">우회</div>
+            <div class="pill-btn">부가기능</div>
+            <div class="pill-btn">공지사항</div>
+            <div class="brightness-control">
+                <span>-</span>
+                <span>☀️</span>
+                <span>+</span>
+            </div>
+        </div>
+
+        <div class="status-icons">
+            <span class="icon-box">T</span>
+            <span class="icon-box">D</span>
+            <span class="icon-box">B</span>
+            <span>📶</span>
+        </div>
+    </div>
+
+    <!-- 메인 콘텐츠 영역 -->
+    <div class="main-content">
+        <div class="route-monitor">
+            <div class="route-axis"></div>
+
+            <div class="axis-node node-top2"></div>
+            <div class="axis-node node-top1"></div>
+            <div class="axis-node node-bottom1"></div>
+            <div class="axis-node node-bottom2"></div>
+
+            <div class="bus-gap-card gap-top2">
+                <span style="font-size:8px;">앞앞차</span>
+                <span class="gap-value">00분 0.0km</span>
+            </div>
+            <div class="bus-gap-card gap-top1">
+                <span style="font-size:8px;">앞차</span>
+                <span class="gap-value">00분 0.0km</span>
+            </div>
+            <div class="bus-gap-card gap-bottom1">
+                <span style="font-size:8px;">뒷차</span>
+                <span class="gap-value">00분 0.0km</span>
+            </div>
+            <div class="bus-gap-card gap-bottom2">
+                <span style="font-size:8px;">뒷뒷차</span>
+                <span class="gap-value">00분 0.0km</span>
+            </div>
+
+            <!-- 버스 정보 -->
+            <div class="current-bus-box">
+                <div class="bus-front-cap"></div>
+                <div style="display:flex; align-items:baseline; overflow:hidden;">
+                    <span class="bus-route-no" id="busRouteNo">---번</span>
+                    <span class="bus-plate-no" id="busPlateNo">5442</span>
+                </div>
+            </div>
+
+            <!-- 현재 정류장 정보 -->
+            <div class="current-station-node"></div>
+            <div class="current-station-display">
+                <span class="station-name-text" id="currentStationName">불러오는 중...</span>
+                <div class="arrow-next-btn">❯</div>
+            </div>
+        </div>
+
+        <!-- 승하차 상태 카운터 -->
+        <div class="passenger-status-panel">
+            <div class="status-card">
+                <div class="check-badge">✓</div>
+                <span class="card-title">승차</span>
+            </div>
+            <div class="status-card">
+                <div class="check-badge">✓</div>
+                <span class="card-title">하차1</span>
+            </div>
+            <div class="status-card">
+                <div class="check-badge">✓</div>
+                <span class="card-title">하차2</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 하단 요금 버튼 바 -->
+    <div class="bottom-action-bar">
+        <button class="action-btn btn-cancel">취소 ✖</button>
+        <button class="action-btn btn-fare">성인</button>
+        <button class="action-btn btn-fare">청소년</button>
+        <button class="action-btn btn-fare">어린이</button>
+        <button class="action-btn btn-confirm">확인 ✔</button>
+    </div>
+
+    <script>
+        const stationNameEl = document.getElementById('currentStationName');
+        const busRouteNoEl = document.getElementById('busRouteNo');
+
+        // 화면 갱신 전용 함수
+        function updateUI(busNum, stName) {
+            if (busNum) busRouteNoEl.innerText = `${busNum}번`;
+            if (stName) stationNameEl.innerText = stName;
+        }
+
+        // 1. postMessage 메시지 수신 (가장 확실함)
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'UPDATE_STATION') {
+                updateUI(event.data.busNumber, event.data.stationName);
+            }
+        });
+
+        // 2. 직접 참조 방식 (폴백 동기화)
+        function pollParentData() {
+            try {
+                const parentWin = window.parent;
+                if (parentWin && parentWin.busConfig && parentWin.stationDB) {
+                    const idx = parentWin.currentIndex || 0;
+                    const seq = parentWin.busConfig.sequence[idx];
+
+                    const busNo = parentWin.busConfig.busNumber || '---';
+                    let stName = '불러오는 중...';
+
+                    if (seq && parentWin.stationDB[seq.current]) {
+                        stName = parentWin.stationDB[seq.current].name;
+                    }
+                    updateUI(busNo, stName);
+                }
+            } catch (e) {
+                // 크로스 오리진 제한 등의 에러는 postMessage로 커버됨
+            }
+        }
+
+        setInterval(pollParentData, 200);
+        window.onload = pollParentData;
+    </script>
+</body>
+</html>
