@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메인 | 진로정보망 커리어넷</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 20px;
+        }
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #555;
+        }
+        .search-box {
+            padding: 8px 12px;
+            font-size: 14px;
+            width: 260px;
+            border: 1px solid #ccc;
+            border-radius: 2px;
+            outline: none;
+        }
+        .search-box:focus {
+            border-color: #888;
+        }
+        .result-container {
+            margin-top: 15px;
+            background-color: #fff;
+            padding: 15px;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .station-item {
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+        }
+        .station-item:last-child {
+            border-bottom: none;
+        }
+        .station-name {
+            font-weight: bold;
+        }
+        .station-length {
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>역 검색기</h1>
+        <span class="subtitle" id="totalCount"></span>
+        <input type="text" id="searchInput" class="search-box" placeholder="단어 입력하라고 이 착한친구야" oninput="filterStations()">
+    </div>
+
+    <div class="result-container" id="resultContainer"></div>
+    <!-- train.js 불러오는거-->
+    <script src="train.js"></script>
+
+    <script>
+        const cleanStations = rawStationText
+            .split('\n')
+            .map(item => {
+                return item.replace(/\(.*?\)/g, '').trim();
+            })
+            .filter(item => {
+                const isOnlyConsonants = /^[ㄱ-ㅎ]+$/.test(item);
+                return item.length > 0 && !isOnlyConsonants;
+            });
+        const sortedStations = Array.from(new Set(cleanStations)).sort((a, b) => {
+            if (b.length !== a.length) {
+                return b.length - a.length;
+            }
+            return a.localeCompare(b, 'ko');
+        });
+
+        document.getElementById('totalCount').innerText = `총 ${sortedStations.length}개 역`;
+
+        function filterStations() {
+            const query = document.getElementById('searchInput').value.trim();
+            const container = document.getElementById('resultContainer');
+            container.innerHTML = '';
+
+            if (query === '') {
+                container.innerHTML = '<div style="color: #888;">입력해보세요</div>';
+                return;
+            }
+            const filtered = sortedStations.filter(name => name.startsWith(query));
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div style="color: #888;">검색 결과가 없어요 개ㅅㄲ야</div>';
+                return;
+            }
+
+            filtered.forEach(name => {
+                const item = document.createElement('div');
+                item.className = 'station-item';
+                item.innerHTML = `
+                    <span class="station-name">${name}</span>
+                    <span class="station-length">${name.length}글자</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        filterStations();
+    </script>
+</body>
+</html>
