@@ -17,14 +17,14 @@ const rawData = {
         "5첩밥상 그릇 6개",
         "4가지 깃발",
         "도자기막걸리그릇+병",
-        "꽹과리"
+        "꽹과리",
+        "북"
       ],
       inProgress: [
-        { name: "북", percent: 0 },
-        { name: "징", percent: 0 },
-        { name: "태평소", percent: 0 },
-        { name: "곰방대", percent: 0 },
-        { name: "부채", percent: 0 },
+        { name: "징", percent: 10 },
+        { name: "태평소", percent: 30 },
+        { name: "곰방대", percent: 5 },
+        { name: "부채", percent: 20 },
         { name: "육모방망이", percent: 0 },
         { name: "호각", percent: 0 },
         { name: "등체", percent: 0 },
