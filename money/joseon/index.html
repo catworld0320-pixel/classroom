@@ -3,67 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>조선 급여</title>
+  <title>조선 급여 및 개발현황</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+
   <div class="dashboard-container">
-    <header class="header">
-      <h1>조선 급여 및 개발현황</h1>
-      <p class="subtitle">업데이트는 3~5분정도 걸림</p>
-    </header>
-
-    <section class="summary-cards">
-      <div class="card dday-card">
-        <div class="card-title">💰 다음 정산일</div>
-        <div class="card-value" id="dday-text">D-00</div>
-        <div class="card-sub">매월 24일정산</div>
+    <div class="header-container">
+      <div>
+        <h1>조선 급여 및 개발현황</h1>
+        <p class="subtitle">업데이트는 3~5분정도 걸림</p>
       </div>
 
-      <div class="card salary-card">
-        <div class="card-title">💰 해당 구간 급여</div>
-        <div class="card-value" id="card-period-salary">-</div>
-        <div class="card-sub" id="card-period-label">기간: -</div>
+      <!-- 정산 기간 선택 드롭다운 -->
+      <div class="select-box">
+        <label for="period-select">정산 기간 선택</label>
+        <select id="period-select"></select>
       </div>
-    </section>
+    </div>
 
-    <!-- 탭 네비게이션 (model.js 데이터를 기반으로 JS가 자동 생성) -->
-    <nav class="tab-nav" id="tab-container"></nav>
-
-    <!-- 탭 콘텐츠 영역 -->
-    <main class="main-content">
-      <!-- 작업 내역 탭 -->
-      <div id="tab-tasks" class="tab-content active">
-        <div class="content-grid">
-          <section class="panel">
-            <div class="panel-header">
-              <h2>완료된 작업</h2>
-              <span class="badge" id="completed-count">0개</span>
-            </div>
-            <ul id="completed-list" class="item-list"></ul>
-          </section>
-
-          <section class="panel">
-            <div class="panel-header">
-              <h2>진행중인 작업</h2>
-              <span class="badge warning" id="in-progress-count">0개</span>
-            </div>
-            <ul id="progress-list" class="item-list"></ul>
-          </section>
+    <!-- 상단 2열 카드 -->
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-header">
+          <span class="icon">💰</span> 다음 정산일
         </div>
+        <div class="card-value" id="dday">D-00</div>
+        <div class="card-sub" id="dday-sub">매월 24일정산</div>
       </div>
-      <div id="tab-salary" class="tab-content">
-        <div class="panel full-width">
-          <div class="panel-header">
-            <h2>급여 내역</h2>
-          </div>
-          <div class="salary-grid" id="salary-grid"></div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="icon">💰</span> 해당 구간 급여
         </div>
+        <div class="card-value" id="salary-amount">-</div>
+        <div class="card-sub" id="salary-period">기간: -</div>
       </div>
-    </main>
+    </div>
+
+    <!-- 하단 2열 작업 현황 -->
+    <div class="status-grid">
+      <div class="card">
+        <div class="section-header">
+          <h2>완료된 작업</h2>
+          <span class="badge green" id="completed-count">0개</span>
+        </div>
+        <ul class="task-list" id="completed-list"></ul>
+      </div>
+
+      <div class="card">
+        <div class="section-header">
+          <h2>진행중인 작업</h2>
+          <span class="badge yellow" id="inprogress-count">0개</span>
+        </div>
+        <ul class="task-list" id="inprogress-list"></ul>
+      </div>
+    </div>
   </div>
 
-  <script src="model.js"></script>
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
