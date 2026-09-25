@@ -27,7 +27,6 @@ const rawData = {
         { name: "부채", percent: 0 },
         { name: "육모방망이", percent: 0 },
         { name: "호각", percent: 0 },
-        { name: "등체", percent: 0 },
         { name: "책", percent: 0 }
       ]
     },
