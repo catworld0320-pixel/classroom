@@ -3,64 +3,589 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>조선 급여 및 개발현황</title>
+
   <link rel="stylesheet" href="style.css">
+
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
+
 <body>
 
   <div class="dashboard-container">
-    <div class="header-container">
-      <div>
-        <h1>조선 급여 및 개발현황</h1>
-        <p class="subtitle">업데이트는 3~5분정도 걸림</p>
+
+    <!-- =========================================
+         상단 헤더
+    ========================================== -->
+    <header class="header-container">
+
+      <div class="header-title">
+        <h1 id="page-title">조선 개발현황</h1>
+
+        <p class="subtitle" id="page-subtitle">
+          작업 진행 상황을 확인하세요.
+        </p>
       </div>
 
-      <!-- 정산 기간 선택 드롭다운 -->
-      <div class="select-box">
-        <label for="period-select">정산 기간 선택</label>
-        <select id="period-select"></select>
+      <div class="header-status">
+        <span class="status-dot"></span>
+        <span>정상</span>
       </div>
-    </div>
 
-    <!-- 상단 2열 카드 -->
-    <div class="card-grid">
-      <div class="card">
-        <div class="card-header">
-          <span class="icon">💰</span> 다음 정산일
+    </header>
+
+
+    <!-- =========================================
+         메인 컨텐츠
+    ========================================== -->
+    <main class="app-content">
+
+
+      <!-- =======================================
+           제작 페이지
+      ======================================== -->
+      <section id="page-work" class="page active">
+
+        <!-- 상단 요약 -->
+        <div class="card-grid">
+
+          <div class="card summary-card">
+
+            <div class="card-header">
+              <span class="icon">💰</span>
+              다음 정산일
+            </div>
+
+            <div class="card-value" id="dday">
+              D-00
+            </div>
+
+            <div class="card-sub" id="dday-sub">
+              매월 24일 정산
+            </div>
+
+          </div>
+
+
+          <div class="card summary-card">
+
+            <div class="card-header">
+              <span class="icon">📦</span>
+              전체 작업
+            </div>
+
+            <div class="card-value" id="total-work-count">
+              0개
+            </div>
+
+            <div class="card-sub">
+              완료 + 진행중
+            </div>
+
+          </div>
+
         </div>
-        <div class="card-value" id="dday">D-00</div>
-        <div class="card-sub" id="dday-sub">매월 24일정산</div>
-      </div>
 
-      <div class="card">
-        <div class="card-header">
-          <span class="icon">💰</span> 해당 구간 급여
-        </div>
-        <div class="card-value" id="salary-amount">-</div>
-        <div class="card-sub" id="salary-period">기간: -</div>
-      </div>
-    </div>
 
-    <!-- 하단 2열 작업 현황 -->
-    <div class="status-grid">
-      <div class="card">
-        <div class="section-header">
-          <h2>완료된 작업</h2>
-          <span class="badge green" id="completed-count">0개</span>
-        </div>
-        <ul class="task-list" id="completed-list"></ul>
-      </div>
+        <!-- ===================================
+             전체 진행률
+        ==================================== -->
+        <div class="card progress-summary-card">
 
-      <div class="card">
-        <div class="section-header">
-          <h2>진행중인 작업</h2>
-          <span class="badge yellow" id="inprogress-count">0개</span>
+          <div class="section-header">
+
+            <div>
+              <h2>전체 작업 진행률</h2>
+
+              <p class="section-description">
+                현재 정산 기간의 작업 현황입니다.
+              </p>
+            </div>
+
+            <strong id="overall-progress-text">
+              0%
+            </strong>
+
+          </div>
+
+
+          <div class="large-progress">
+
+            <div
+              class="large-progress-fill"
+              id="overall-progress-bar"
+            ></div>
+
+          </div>
+
+
+          <div class="progress-summary-bottom">
+
+            <span id="overall-progress-count">
+              0 / 0 완료
+            </span>
+
+            <span id="overall-progress-status">
+              진행중
+            </span>
+
+          </div>
+
         </div>
-        <ul class="task-list" id="inprogress-list"></ul>
-      </div>
-    </div>
+
+
+        <!-- ===================================
+             검색 / 필터
+        ==================================== -->
+        <div class="work-toolbar">
+
+          <div class="search-box">
+
+            <span class="search-icon">🔍</span>
+
+            <input
+              type="text"
+              id="task-search"
+              placeholder="작업 검색..."
+              autocomplete="off"
+            >
+
+          </div>
+
+
+          <div class="filter-buttons">
+
+            <button
+              class="filter-button active"
+              data-filter="all"
+            >
+              전체
+            </button>
+
+            <button
+              class="filter-button"
+              data-filter="completed"
+            >
+              완료
+            </button>
+
+            <button
+              class="filter-button"
+              data-filter="progress"
+            >
+              진행중
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <!-- ===================================
+             작업 2열
+        ==================================== -->
+        <div class="status-grid">
+
+
+          <!-- 완료 -->
+          <div class="card task-card">
+
+            <div class="section-header">
+
+              <div>
+
+                <h2>
+                  완료된 작업
+                </h2>
+
+                <p class="section-description">
+                  완료된 제작물
+                </p>
+
+              </div>
+
+              <span
+                class="badge green"
+                id="completed-count"
+              >
+                0개
+              </span>
+
+            </div>
+
+
+            <ul
+              class="task-list"
+              id="completed-list"
+            ></ul>
+
+          </div>
+
+
+          <!-- 진행중 -->
+          <div class="card task-card">
+
+            <div class="section-header">
+
+              <div>
+
+                <h2>
+                  진행중인 작업
+                </h2>
+
+                <p class="section-description">
+                  현재 제작중인 작업
+                </p>
+
+              </div>
+
+              <span
+                class="badge yellow"
+                id="inprogress-count"
+              >
+                0개
+              </span>
+
+            </div>
+
+
+            <ul
+              class="task-list"
+              id="inprogress-list"
+            ></ul>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- =======================================
+           급여 페이지
+      ======================================== -->
+      <section id="page-salary" class="page">
+
+
+        <!-- 기간 선택 -->
+        <div class="card salary-selector-card">
+
+          <div class="card-header">
+            <span class="icon">📅</span>
+            정산 기간
+          </div>
+
+          <select id="salary-period-select">
+          </select>
+
+          <p
+            class="salary-period-note"
+            id="salary-period-note"
+          >
+          </p>
+
+        </div>
+
+
+        <!-- 当前 급여 -->
+        <div class="salary-main-card">
+
+          <div class="salary-main-label">
+            해당 구간 급여
+          </div>
+
+          <div
+            class="salary-main-value"
+            id="salary-amount"
+          >
+            0원
+          </div>
+
+          <div
+            class="salary-main-period"
+            id="salary-period"
+          >
+            기간: -
+          </div>
+
+        </div>
+
+
+        <!-- 급여 계산 -->
+        <div class="card salary-detail-card">
+
+          <div class="section-header">
+
+            <div>
+
+              <h2>
+                급여 상세
+              </h2>
+
+              <p class="section-description">
+                이 기간의 급여내역임
+              </p>
+
+            </div>
+
+          </div>
+
+
+          <div class="salary-row">
+
+            <span>
+              기본 급여
+            </span>
+
+            <strong id="salary-base">
+              0원
+            </strong>
+
+          </div>
+
+
+          <div class="salary-row">
+
+            <span>
+              완료 작업
+            </span>
+
+            <strong id="salary-work-count">
+              0개
+            </strong>
+
+          </div>
+
+
+          <div class="salary-row">
+
+            <span>
+              작업 수당
+            </span>
+
+            <strong id="salary-bonus">
+              0원
+            </strong>
+
+          </div>
+
+
+          <div class="salary-divider"></div>
+
+
+          <div class="salary-row salary-total">
+
+            <span>
+              총 급여
+            </span>
+
+            <strong id="salary-total">
+              0원
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- 정산 상태 -->
+        <div class="card salary-status-card">
+
+          <div class="salary-status-icon" id="salary-status-icon">
+            🟢
+          </div>
+
+          <div>
+
+            <strong id="salary-status-title">
+              진행 중인 정산
+            </strong>
+
+            <p id="salary-status-description">
+              현재 정산 기간입니다.
+            </p>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+
+      <!-- =======================================
+           차트 페이지
+      ======================================== -->
+      <section id="page-chart" class="page">
+
+
+        <!-- 차트 설명 -->
+        <div class="card chart-intro-card">
+
+          <div class="card-header">
+            <span class="icon">😍</span>
+            통계
+          </div>
+
+          <h2>
+            급여 및 작업현황 한눈에보기
+          </h2>
+
+        </div>
+
+
+        <!-- 급여 차트 -->
+        <div class="card chart-card">
+
+          <div class="section-header">
+
+            <div>
+
+              <h2>
+                급여 추이
+              </h2>
+
+              <p class="section-description">
+                정산 기간별 총 급여
+              </p>
+
+            </div>
+
+          </div>
+
+          <div class="chart-wrapper">
+
+            <canvas id="salary-chart"></canvas>
+
+          </div>
+
+        </div>
+
+
+        <!-- 완료 작업 차트 -->
+        <div class="card chart-card">
+
+          <div class="section-header">
+
+            <div>
+
+              <h2>
+                완료 작업 추이
+              </h2>
+
+              <p class="section-description">
+                정산 기간별 완료 작업 수
+              </p>
+
+            </div>
+
+          </div>
+
+          <div class="chart-wrapper">
+
+            <canvas id="completed-chart"></canvas>
+
+          </div>
+
+        </div>
+
+
+        <!-- 통계 카드 -->
+        <div class="stat-grid">
+
+          <div class="card stat-card">
+
+            <span class="stat-label">
+              총 완료 작업
+            </span>
+
+            <strong id="chart-total-completed">
+              0개
+            </strong>
+
+          </div>
+
+
+          <div class="card stat-card">
+
+            <span class="stat-label">
+              평균 급여
+            </span>
+
+            <strong id="chart-average-salary">
+              0원
+            </strong>
+
+          </div>
+
+        </div>
+
+      </section>
+
+    </main>
+
   </div>
 
+
+  <!-- =========================================
+       하단 고정 탭바
+  ========================================== -->
+  <nav class="bottom-nav">
+
+    <button
+      class="nav-button active"
+      data-page="work"
+    >
+
+      <span class="nav-icon">
+        😎
+      </span>
+
+      <span class="nav-label">
+        제작
+      </span>
+
+    </button>
+
+
+    <button
+      class="nav-button"
+      data-page="salary"
+    >
+
+      <span class="nav-icon">
+        😍
+      </span>
+
+      <span class="nav-label">
+        급여
+      </span>
+
+    </button>
+
+
+    <button
+      class="nav-button"
+      data-page="chart"
+    >
+
+      <span class="nav-icon">
+        😁
+      </span>
+
+      <span class="nav-label">
+        차트
+      </span>
+
+    </button>
+
+  </nav>
+
+
   <script type="module" src="script.js"></script>
+
 </body>
 </html>
