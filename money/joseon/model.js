@@ -20,9 +20,11 @@ const rawData = {
         "꽹과리",
         "북",
         "징",
+        "태평소",
+        
       ],
       inProgress: [
-        { name: "태평소", percent: 30 },
+        { name: "상", percent: 0 },
         { name: "곰방대", percent: 5 },
         { name: "부채", percent: 0 },
         { name: "육모방망이", percent: 0 },
