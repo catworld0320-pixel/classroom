@@ -18,13 +18,13 @@ const rawData = {
         "4가지 깃발",
         "도자기막걸리그릇+병",
         "꽹과리",
-        "북"
+        "북",
+        "징",
       ],
       inProgress: [
-        { name: "징", percent: 10 },
         { name: "태평소", percent: 30 },
         { name: "곰방대", percent: 5 },
-        { name: "부채", percent: 20 },
+        { name: "부채", percent: 0 },
         { name: "육모방망이", percent: 0 },
         { name: "호각", percent: 0 },
         { name: "등체", percent: 0 },
