@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>우리 반 톡</title>
+
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+</head>
+
+
+<body>
+
+<!-- ==================================================
+     LOGIN
+================================================== -->
+
+<div
+    id="loginScreen"
+    class="login-screen"
+>
+
+    <div class="login-card">
+
+        <div class="login-logo">
+            💬
+        </div>
+
+        <h1>
+            우리 반 톡
+        </h1>
+
+        <p class="login-subtitle">
+            우리 반 친구들과 이야기해보세요.
+        </p>
+
+
+        <form id="loginForm">
+
+            <div class="input-group">
+
+                <label for="emailInput">
+                    이메일
+                </label>
+
+                <input
+                    id="emailInput"
+                    type="email"
+                    autocomplete="username"
+                    placeholder="이메일을 입력하세요"
+                    required
+                >
+
+            </div>
+
+
+            <div class="input-group">
+
+                <label for="passwordInput">
+                    비밀번호
+                </label>
+
+                <input
+                    id="passwordInput"
+                    type="password"
+                    autocomplete="current-password"
+                    placeholder="비밀번호를 입력하세요"
+                    required
+                >
+
+            </div>
+
+
+            <div
+                id="loginError"
+                class="login-error"
+            ></div>
+
+
+            <button
+                id="loginButton"
+                type="submit"
+                class="login-button"
+            >
+                로그인
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     CHAT
+================================================== -->
+
+<div
+    id="chatScreen"
+    class="chat-app hidden"
+>
+
+
+    <!-- ==================================================
+         LEFT SIDEBAR
+    ================================================== -->
+
+    <aside class="server-sidebar">
+
+        <div class="server-icon active">
+            💬
+        </div>
+
+        <div class="server-divider"></div>
+
+        <div
+            class="server-icon"
+            title="우리 반"
+        >
+            🏫
+        </div>
+
+        <div
+            class="server-icon"
+            title="공지"
+        >
+            📢
+        </div>
+
+    </aside>
+
+
+
+    <!-- ==================================================
+         CHANNEL SIDEBAR
+    ================================================== -->
+
+    <aside class="channel-sidebar">
+
+        <div class="server-header">
+
+            <span>
+                우리 반
+            </span>
+
+            <span class="server-arrow">
+                ▾
+            </span>
+
+        </div>
+
+
+        <div class="channel-list">
+
+
+            <div class="channel-category">
+
+                <div class="category-title">
+
+                    <span>
+                        채팅
+                    </span>
+
+                </div>
+
+
+                <button
+                    class="channel-item active"
+                    type="button"
+                >
+
+                    <span class="channel-hash">
+                        #
+                    </span>
+
+                    <span>
+                        일반
+                    </span>
+
+                </button>
+
+
+                <button
+                    class="channel-item"
+                    type="button"
+                >
+
+                    <span class="channel-hash">
+                        #
+                    </span>
+
+                    <span>
+                        잡담
+                    </span>
+
+                </button>
+
+            </div>
+
+
+            <div class="channel-category">
+
+                <div class="category-title">
+
+                    <span>
+                        정보
+                    </span>
+
+                </div>
+
+
+                <button
+                    class="channel-item"
+                    type="button"
+                >
+
+                    <span class="channel-hash">
+                        #
+                    </span>
+
+                    <span>
+                        공지사항
+                    </span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             USER AREA
+        ================================================== -->
+
+        <div class="user-area">
+
+            <div class="my-avatar">
+                👤
+            </div>
+
+
+            <div class="my-user-info">
+
+                <div
+                    id="myUsername"
+                    class="my-username"
+                >
+                    사용자
+                </div>
+
+                <div class="my-status">
+                    온라인
+                </div>
+
+            </div>
+
+
+            <button
+                id="logoutButton"
+                class="user-action-button"
+                type="button"
+                title="로그아웃"
+            >
+                ⎋
+            </button>
+
+        </div>
+
+    </aside>
+
+
+
+    <!-- ==================================================
+         MAIN CHAT
+    ================================================== -->
+
+    <main class="chat-main">
+
+
+        <!-- ==================================================
+             CHAT HEADER
+        ================================================== -->
+
+        <header class="chat-header">
+
+            <div class="chat-title">
+
+                <span class="header-hash">
+                    #
+                </span>
+
+                <span>
+                    일반
+                </span>
+
+            </div>
+
+
+            <div class="chat-description">
+
+                우리 반 친구들과 이야기하는 공간
+
+            </div>
+
+
+            <div class="header-actions">
+
+                <div
+                    id="onlineText"
+                    class="online-status"
+                >
+                    온라인
+                </div>
+
+
+                <button
+                    id="adminButton"
+                    class="admin-button hidden"
+                    type="button"
+                >
+                    ⚙ 관리자
+                </button>
+
+            </div>
+
+        </header>
+
+
+
+        <!-- ==================================================
+             MESSAGES
+        ================================================== -->
+
+        <section
+            id="messages"
+            class="messages"
+        >
+
+            <div
+                id="emptyMessage"
+                class="empty-message"
+            >
+
+                <div class="empty-icon">
+                    💬
+                </div>
+
+                <h2>
+                    우리 반 톡에 오신 것을 환영합니다!
+                </h2>
+
+                <p>
+                    첫 번째 메시지를 보내보세요.
+                </p>
+
+            </div>
+
+        </section>
+
+
+
+        <!-- ==================================================
+             REPLY BAR
+        ================================================== -->
+
+        <div
+            id="replyBar"
+            class="reply-bar hidden"
+        >
+
+            <div class="reply-icon">
+                ↩
+            </div>
+
+
+            <div class="reply-content">
+
+                <div class="reply-label">
+                    답장 중
+                </div>
+
+                <div
+                    id="replyText"
+                    class="reply-text"
+                ></div>
+
+            </div>
+
+
+            <button
+                id="cancelReplyButton"
+                class="cancel-reply"
+                type="button"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+
+        <!-- ==================================================
+             MESSAGE INPUT
+        ================================================== -->
+
+        <div class="message-input-area">
+
+            <form
+                id="messageForm"
+                class="message-form"
+            >
+
+                <div class="message-input-wrapper">
+
+                    <button
+                        type="button"
+                        class="input-plus"
+                        title="추가"
+                    >
+                        +
+                    </button>
+
+
+                    <textarea
+                        id="messageInput"
+                        rows="1"
+                        maxlength="2000"
+                        placeholder="메시지를 보내세요..."
+                    ></textarea>
+
+
+                    <button
+                        id="sendButton"
+                        type="submit"
+                        class="send-button"
+                        title="보내기"
+                    >
+                        ➤
+                    </button>
+
+                </div>
+
+            </form>
+
+
+            <div class="input-hint">
+
+                Enter로 전송 · Shift + Enter로 줄바꿈
+
+            </div>
+
+        </div>
+
+    </main>
+
+
+
+    <!-- ==================================================
+         RIGHT MEMBER SIDEBAR
+    ================================================== -->
+
+    <aside class="member-sidebar">
+
+        <div class="member-header">
+
+            온라인 사용자
+
+        </div>
+
+
+        <div class="member-section">
+
+            <div class="member-section-title">
+
+                ONLINE
+
+            </div>
+
+
+            <div class="member-user">
+
+                <div class="member-avatar online">
+                    👤
+                </div>
+
+                <div class="member-name">
+                    나
+                </div>
+
+                <div class="online-dot"></div>
+
+            </div>
+
+        </div>
+
+
+        <div class="member-section">
+
+            <div class="member-section-title">
+
+                안내
+
+            </div>
+
+
+            <div class="member-info">
+
+                <span>
+                    💬
+                </span>
+
+                <span>
+                    서로 존중하며 대화해주세요.
+                </span>
+
+            </div>
+
+        </div>
+
+    </aside>
+
+</div>
+
+
+
+<!-- ==================================================
+     ADMIN PANEL
+================================================== -->
+
+<div
+    id="adminPanel"
+    class="admin-overlay hidden"
+>
+
+    <div class="admin-modal">
+
+        <div class="admin-modal-header">
+
+            <div>
+
+                <div class="admin-title">
+                    관리자 패널
+                </div>
+
+                <div class="admin-subtitle">
+                    사용자 및 로그인 ID 확인
+                </div>
+
+            </div>
+
+
+            <button
+                id="closeAdminButton"
+                class="admin-close"
+                type="button"
+            >
+                ×
+            </button>
+
+        </div>
+
+
+        <div class="admin-body">
+
+            <div class="admin-warning">
+
+                🔒 관리자 계정으로 로그인한 경우에만
+                이 정보를 볼 수 있습니다.
+
+            </div>
+
+
+            <div
+                id="adminUsers"
+                class="admin-users"
+            >
+                불러오는 중...
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+<!-- ==================================================
+     SUPABASE
+================================================== -->
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script src="DB.js"></script>
+
+<script src="main.js"></script>
+
+</body>
+
+</html>
