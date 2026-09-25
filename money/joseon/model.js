@@ -14,17 +14,16 @@ const rawData = {
       note: "진행 중인 정산 기간",
       completed: [
         "장구",
-        "5첩밥상 그릇 6개",
+        "5첩밥상 그릇 6개,수저",
         "4가지 깃발",
         "도자기막걸리그릇+병",
         "꽹과리",
         "북",
         "징",
         "태평소",
-        
+        "상,수저받침대",
       ],
       inProgress: [
-        { name: "상", percent: 0 },
         { name: "곰방대", percent: 5 },
         { name: "부채", percent: 0 },
         { name: "육모방망이", percent: 0 },
