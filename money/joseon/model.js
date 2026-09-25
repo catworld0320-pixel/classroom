@@ -24,11 +24,11 @@ const rawData = {
         "상,수저받침대",
       ],
       inProgress: [
-        { name: "곰방대", percent: 5 },
-        { name: "부채", percent: 0 },
-        { name: "육모방망이", percent: 0 },
-        { name: "호각", percent: 0 },
-        { name: "책", percent: 0 }
+        { name: "곰방대", percent: 5, detail: "자료 찾는중" },
+        { name: "부채", percent: 0, detail: "준비 중" },
+        { name: "육모방망이", percent: 0, detail: "준비 중" },
+        { name: "호각", percent: 0, detail: "준비 중" },
+        { name: "책", percent: 0, detail: "자료 찾는중" }
       ]
     },
     {
