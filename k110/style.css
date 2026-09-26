@@ -1,0 +1,231 @@
+/* ==================================================
+   기본
+   ================================================== */
+
+* {
+    box-sizing: border-box;
+
+    margin: 0;
+    padding: 0;
+}
+
+
+html,
+body {
+    width: 100%;
+    min-height: 100%;
+
+    font-family:
+        Arial,
+        sans-serif;
+
+    background: #f3f3f3;
+
+    color: #111;
+}
+
+
+/* ==================================================
+   전체 컨테이너
+   ================================================== */
+
+body {
+    display: flex;
+
+    justify-content: center;
+
+    padding: 40px;
+}
+
+
+.container {
+    width: min(
+        1100px,
+        100%
+    );
+}
+
+
+/* ==================================================
+   제목
+   ================================================== */
+
+h1 {
+    margin-bottom: 25px;
+
+    font-size: 28px;
+
+    font-weight: 700;
+}
+
+
+/* ==================================================
+   편집 영역
+   ================================================== */
+
+.editor-area {
+    display: grid;
+
+    grid-template-columns:
+        1fr 1fr;
+
+    gap: 20px;
+}
+
+
+/* ==================================================
+   입력창
+   ================================================== */
+
+#textInput {
+    width: 100%;
+
+    height: 500px;
+
+    resize: vertical;
+
+    padding: 25px;
+
+    border:
+        1px solid #ccc;
+
+    border-radius: 14px;
+
+    background: #ffffff;
+
+    outline: none;
+
+    font-size: 22px;
+
+    line-height: 1.5;
+
+    font-family:
+        Arial,
+        sans-serif;
+}
+
+
+#textInput:focus {
+    border-color: #777;
+}
+
+
+#textInput::placeholder {
+    color: #999;
+}
+
+
+/* ==================================================
+   미리보기
+   ================================================== */
+
+.preview {
+    width: 100%;
+
+    aspect-ratio: 1 / 1;
+
+    /*
+        흰색 글자가 잘 보이도록
+        검은색 미리보기 배경
+    */
+
+    background: #000000;
+
+    border:
+        1px solid #ccc;
+
+    border-radius: 14px;
+
+    overflow: hidden;
+
+    display: flex;
+
+    align-items: center;
+
+    justify-content: center;
+}
+
+
+#previewCanvas {
+    width: 100%;
+
+    height: 100%;
+
+    display: block;
+
+    object-fit: contain;
+}
+
+
+/* ==================================================
+   버튼 영역
+   ================================================== */
+
+.controls {
+    margin-top: 20px;
+
+    display: flex;
+
+    justify-content: flex-end;
+}
+
+
+/* ==================================================
+   PNG 저장 버튼
+   ================================================== */
+
+#saveButton {
+    border: none;
+
+    padding:
+        15px 30px;
+
+    border-radius: 10px;
+
+    background: #111111;
+
+    color: #ffffff;
+
+    font-size: 17px;
+
+    font-weight: 700;
+
+    cursor: pointer;
+
+    transition:
+        transform 0.1s,
+        opacity 0.1s;
+}
+
+
+#saveButton:hover {
+    opacity: 0.85;
+}
+
+
+#saveButton:active {
+    transform: scale(0.97);
+}
+
+
+/* ==================================================
+   모바일
+   ================================================== */
+
+@media (max-width: 800px) {
+
+    body {
+        padding: 20px;
+    }
+
+
+    .editor-area {
+        grid-template-columns: 1fr;
+    }
+
+
+    #textInput {
+        height: 250px;
+    }
+
+}
