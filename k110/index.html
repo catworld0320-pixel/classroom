@@ -1,0 +1,660 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>K110 일방통행체 글자 생성기</title>
+
+    <link
+        rel="stylesheet"
+        href="./style.css"
+    >
+</head>
+
+<body>
+
+    <main class="container">
+
+        <h1>K110 일방통행체</h1>
+        <h2>!!안에 넣으셈</h2>
+        <h5>직진,직좌회전,직좌우회전,직우회전,좌차로변경,우차로변경,좌회전,좌우회전,좌회전유턴,우회전,자전거우선도로(자전거우선),자전거,오르막,유턴,양보,기점,종점,횡단보도주의,정지선,우회로,감응,횡단보도,속도제한(2~60),자율버스,교차로,주차,장애인,전기차,여성안심귀갓길,과속방지턱,차선</h5>
+
+
+        <div class="editor-area">
+
+            <!-- 글자 입력 -->
+            <textarea
+                id="textInput"
+                placeholder="여기에 글자를 입력하세요."
+                spellcheck="false"
+            ></textarea>
+
+
+            <!-- 미리보기 -->
+            <div class="preview">
+
+                <canvas
+                    id="previewCanvas"
+                ></canvas>
+
+            </div>
+
+        </div>
+
+
+        <!-- 버튼 -->
+        <div class="controls">
+
+            <button
+                id="saveButton"
+                type="button"
+            >
+                PNG 저장
+            </button>
+
+        </div>
+
+    </main>
+
+
+    <script>
+
+        // ==================================================
+        // 기본 설정
+        // ==================================================
+
+        const textInput =
+            document.getElementById("textInput");
+
+        const previewCanvas =
+            document.getElementById("previewCanvas");
+
+        const saveButton =
+            document.getElementById("saveButton");
+
+
+        const FONT_NAME =
+            "K110-Oneway";
+
+        const FONT_PATH =
+            "./fonts/K110_일방통행체%20Curve.otf";
+
+
+        // PNG 최종 크기
+        const SIZE = 4096;
+
+
+        let fontLoaded = false;
+
+
+        // ==================================================
+        // 폰트 로딩
+        // ==================================================
+
+        async function loadFont() {
+
+            try {
+
+                const font =
+                    new FontFace(
+                        FONT_NAME,
+                        `url("${FONT_PATH}")`
+                    );
+
+
+                await font.load();
+
+
+                document.fonts.add(font);
+
+
+                // 폰트가 실제로 사용 가능한지 확인
+                await document.fonts.load(
+                    `100px "${FONT_NAME}"`
+                );
+
+
+                fontLoaded = true;
+
+
+                console.log(
+                    "K110 일방통행체 폰트 로딩 완료"
+                );
+
+
+                updatePreview();
+
+
+            } catch (error) {
+
+                console.error(
+                    "폰트 로딩 실패:",
+                    error
+                );
+
+
+                alert(
+                    "폰트를 불러오지 못했습니다.\n\n" +
+                    "fonts 폴더에\n" +
+                    "K110_일방통행체 Curve.otf\n" +
+                    "파일이 있는지 확인해주세요."
+                );
+
+            }
+
+        }
+
+
+        // ==================================================
+        // Canvas 설정
+        // ==================================================
+
+        function setupCanvas(canvas) {
+
+            canvas.width = SIZE;
+            canvas.height = SIZE;
+
+        }
+
+
+        setupCanvas(
+            previewCanvas
+        );
+
+
+        // ==================================================
+        // 폰트 크기 계산
+        // ==================================================
+
+        function calculateFontSize(
+            ctx,
+            lines
+        ) {
+
+            if (!lines.length) {
+
+                return 1000;
+
+            }
+
+
+            /*
+                시작 크기
+
+                글자가 짧으면 크게,
+                글자가 길면 자동으로 작아짐.
+            */
+
+            let fontSize = 10000;
+
+
+            /*
+                캔버스의 98%까지 사용.
+
+                너무 가장자리에 붙지 않으면서
+                최대한 크게 표시.
+            */
+
+            const maxWidth =
+                SIZE * 0.98;
+
+            const maxHeight =
+                SIZE * 0.98;
+
+
+            while (fontSize > 10) {
+
+                ctx.font =
+                    `${fontSize}px "${FONT_NAME}"`;
+
+
+                let widest =
+                    0;
+
+
+                // 가장 긴 줄의 너비 찾기
+                for (const line of lines) {
+
+                    const width =
+                        ctx.measureText(line).width;
+
+
+                    if (width > widest) {
+
+                        widest = width;
+
+                    }
+
+                }
+
+
+                /*
+                    줄 간격
+
+                    여러 줄일 경우에도
+                    전체가 최대한 크게 들어가도록 함.
+                */
+
+                const lineHeight =
+                    fontSize * 1.05;
+
+
+                const totalHeight =
+                    lineHeight * lines.length;
+
+
+                /*
+                    가로와 세로 모두
+                    캔버스 안에 들어오면 확정.
+                */
+
+                if (
+                    widest <= maxWidth &&
+                    totalHeight <= maxHeight
+                ) {
+
+                    break;
+
+                }
+
+
+                fontSize -= 5;
+
+            }
+
+
+            return fontSize;
+
+        }
+
+
+        // ==================================================
+        // 글자 그리기
+        // ==================================================
+
+        function drawText(
+            canvas,
+            text
+        ) {
+
+            const ctx =
+                canvas.getContext("2d");
+
+
+            // 기존 내용 삭제
+            ctx.clearRect(
+                0,
+                0,
+                canvas.width,
+                canvas.height
+            );
+
+
+            // 아무것도 입력하지 않았다면 종료
+            if (!text.trim()) {
+
+                return;
+
+            }
+
+
+            /*
+                줄바꿈 기준으로 분리
+
+                예:
+
+                서울특별시
+                강남구
+
+                →
+
+                [
+                    "서울특별시",
+                    "강남구"
+                ]
+            */
+
+            const lines =
+                text.split("\n");
+
+
+            // 자동 글자 크기 계산
+            const fontSize =
+                calculateFontSize(
+                    ctx,
+                    lines
+                );
+
+
+            // 폰트 설정
+            ctx.font =
+                `${fontSize}px "${FONT_NAME}"`;
+
+
+            // ★ 흰색
+            ctx.fillStyle =
+                "#FFFFFF";
+
+
+            // 가운데 정렬
+            ctx.textAlign =
+                "center";
+
+
+            ctx.textBaseline =
+                "middle";
+
+
+            // 줄 간격
+            const lineHeight =
+                fontSize * 1.05;
+
+
+            // 전체 글자의 높이
+            const totalHeight =
+                lineHeight * lines.length;
+
+
+            /*
+                세로 가운데 정렬
+            */
+
+            const startY =
+                (
+                    SIZE -
+                    totalHeight
+                ) / 2 +
+                lineHeight / 2;
+
+
+            // 각각의 줄 그리기
+            for (
+                let i = 0;
+                i < lines.length;
+                i++
+            ) {
+
+                const y =
+                    startY +
+                    i * lineHeight;
+
+
+                ctx.fillText(
+                    lines[i],
+                    SIZE / 2,
+                    y
+                );
+
+            }
+
+        }
+
+
+        // ==================================================
+        // 미리보기 업데이트
+        // ==================================================
+
+        function updatePreview() {
+
+            if (!fontLoaded) {
+
+                return;
+
+            }
+
+
+            drawText(
+                previewCanvas,
+                textInput.value
+            );
+
+        }
+
+
+        // 글자가 입력될 때마다 미리보기 업데이트
+        textInput.addEventListener(
+            "input",
+            updatePreview
+        );
+
+
+        // ==================================================
+        // PNG 파일명 생성
+        // ==================================================
+
+        function createFileName(text) {
+
+            /*
+                줄바꿈을 공백으로 변경
+
+                서울특별시
+                강남구
+
+                →
+
+                서울특별시 강남구
+            */
+
+            let fileName =
+                text
+                    .replace(
+                        /\r?\n/g,
+                        " "
+                    )
+                    .replace(
+                        /\s+/g,
+                        " "
+                    )
+                    .trim();
+
+
+            /*
+                Windows 파일명에서
+                사용할 수 없는 문자 제거
+            */
+
+            fileName =
+                fileName.replace(
+                    /[\\/:*?"<>|]/g,
+                    ""
+                );
+
+
+            /*
+                파일명이 너무 길어지는 것을 방지
+            */
+
+            fileName =
+                fileName.substring(
+                    0,
+                    150
+                );
+
+
+            return `k110-${fileName}.png`;
+
+        }
+
+
+        // ==================================================
+        // PNG 저장
+        // ==================================================
+
+        saveButton.addEventListener(
+            "click",
+            async () => {
+
+                // 폰트 확인
+                if (!fontLoaded) {
+
+                    alert(
+                        "폰트를 불러오는 중입니다."
+                    );
+
+                    return;
+
+                }
+
+
+                // 입력 내용
+                const text =
+                    textInput.value;
+
+
+                // 빈 글자 방지
+                if (!text.trim()) {
+
+                    alert(
+                        "저장할 글자를 입력해주세요."
+                    );
+
+
+                    textInput.focus();
+
+
+                    return;
+
+                }
+
+
+                /*
+                    저장 전 폰트가
+                    완전히 로딩되었는지 다시 확인
+                */
+
+                await document.fonts.load(
+                    `100px "${FONT_NAME}"`
+                );
+
+
+                // ==================================================
+                // 4096 × 4096 저장용 Canvas
+                // ==================================================
+
+                const canvas =
+                    document.createElement(
+                        "canvas"
+                    );
+
+
+                canvas.width =
+                    SIZE;
+
+
+                canvas.height =
+                    SIZE;
+
+
+                /*
+                    투명 배경이므로
+                    fillRect 등을 사용하지 않음.
+                */
+
+
+                drawText(
+                    canvas,
+                    text
+                );
+
+
+                // ==================================================
+                // 파일명
+                // ==================================================
+
+                const downloadName =
+                    createFileName(
+                        text
+                    );
+
+
+                // ==================================================
+                // PNG 변환
+                // ==================================================
+
+                canvas.toBlob(
+                    (blob) => {
+
+                        if (!blob) {
+
+                            alert(
+                                "PNG 생성에 실패했습니다."
+                            );
+
+                            return;
+
+                        }
+
+
+                        // Blob URL 생성
+                        const url =
+                            URL.createObjectURL(
+                                blob
+                            );
+
+
+                        // 다운로드 링크 생성
+                        const link =
+                            document.createElement(
+                                "a"
+                            );
+
+
+                        link.href =
+                            url;
+
+
+                        link.download =
+                            downloadName;
+
+
+                        document.body.appendChild(
+                            link
+                        );
+
+
+                        // 자동 다운로드
+                        link.click();
+
+
+                        // 링크 제거
+                        link.remove();
+
+
+                        // URL 제거
+                        setTimeout(
+                            () => {
+
+                                URL.revokeObjectURL(
+                                    url
+                                );
+
+                            },
+                            1000
+                        );
+
+
+                    },
+                    "image/png"
+                );
+
+            }
+        );
+
+
+        // ==================================================
+        // 시작
+        // ==================================================
+
+        loadFont();
+
+    </script>
+
+</body>
+
+</html>
