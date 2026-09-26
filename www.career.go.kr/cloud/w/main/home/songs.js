@@ -49,7 +49,7 @@ const songDatabase = [
             { time: 95.76, text: "Kimi ga yowaku wa nai no wakatteta" },
             { time: 97.86, text: "Sore ijou ni boku wa yowakute sa" },
             { time: 100.36, text: "Kimi ga daiji datta'n da" },
-            { time: 102.75, text: ""Hitori de ikite iku'n da" nante sa" },
+            { time: 102.75, text: "Hitori de ikite iku'n da nante sa" },
             { time: 105.19, text: "Kuchi wo tsuite sakenda ano hi kara" },
             { time: 107.52, text: "Kawatte iku boku wo waraeba ii" },
             { time: 110.13, text: "Hitori ga kowai boku wo" },
