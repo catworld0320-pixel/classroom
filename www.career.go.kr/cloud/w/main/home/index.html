@@ -26,16 +26,242 @@
             border: none;
         }
 
+        /* 💡 핵심: iframe이 키보드 포커스를 가로채는 것을 막아주는 투명 방패 레이어 */
+        #iframe-shield {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000000;
+            background: transparent;
+            /* 평소에는 투명하게 마우스 입력을 막고, Alt 키를 누를 때 마우스 이벤트 통과시키려면 아래 설정 활용 가능 */
+        }
+
         /* 토글용 숨김 클래스 */
         .hidden {
             display: none !important;
+        }
+
+        /* 팝업형 공지 모달 스타일 (제공해주신 이미지 디자인 반영) */
+        #notice-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.3); /* 뒷 배경 살짝 어둡게 */
+            z-index: 99998;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding-top: 80px;
+        }
+
+        .notice-card {
+            background-color: #eaf3ff;
+            border: 1px solid #b4d5ff;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            padding: 20px 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .notice-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .notice-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a56db;
+            margin: 0;
+        }
+
+        .notice-close-x {
+            background: #d0e1fd;
+            border: none;
+            color: #333;
+            font-size: 14px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .notice-close-x:hover {
+            background: #abc9fd;
+        }
+
+        .notice-body {
+            font-size: 14px;
+            color: #333;
+            line-height: 1.6;
+            margin-bottom: 20px;
+            cursor: pointer; /* 클릭 시 사이트 이동 안내 */
+        }
+
+        .notice-footer {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+        }
+
+        .notice-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 13px;
+            color: #333;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        /* 왼쪽 아래 도움말 버튼 스타일 */
+        #help-btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            z-index: 99999;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: background-color 0.2s;
+        }
+
+        #help-btn:hover {
+            background-color: #555;
+        }
+
+        /* 도움말 모달(팝업) 스타일 */
+        #help-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 100000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .help-modal-content {
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .help-modal-content h3 {
+            margin: 0;
+            font-size: 20px;
+            color: #333;
+        }
+
+        #help-box {
+            width: 100%;
+            height: 200px;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            background-color: #f9f9f9;
+            overflow-y: auto;
+            box-sizing: border-box;
+            white-space: pre-wrap;
+            line-height: 1.5;
+            color: #333;
+        }
+
+        .help-btn-group {
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        #help-close-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            background-color: #6c757d;
+            color: white;
+        }
+
+        #help-close-btn:hover {
+            background-color: #5a6268;
         }
     </style>
 </head>
 <body>
     <!-- 위장용 커리어넷 화면 -->
     <div id="stealth-overlay">
+        <!-- 💡 iframe 위에 투명 방패를 얹어 키보드 포커스가 안 뺏기게 고정 -->
+        <div id="iframe-shield" onclick="focusMainPage()"></div>
         <iframe id="stealth-frame" src="https://www.career.go.kr"></iframe>
+    </div>
+
+    <!-- Alt+Z로 위장모드를 껐을 때 나타나는 공지 팝업 모달 (이미지 디자인 적용) -->
+    <div id="notice-modal" class="hidden">
+        <div class="notice-card">
+            <div class="notice-header">
+                <h3 class="notice-title">이거 공지 누르면 최신주소 안내사이트로 이동됨. 북마크해두던 알아서하셈</h3>
+                <button class="notice-close-x" onclick="closeNoticeModal()">닫기 ✕</button>
+            </div>
+            <!-- 본문 클릭 시 특정 사이트로 이동 -->
+            <div class="notice-body" onclick="goToTargetSite()">
+                [선생님들에게]<br>
+                우선 아이들에게는 미안하게되었음 어쩔 수 없이 이것부터 전함<br>
+                내가 가장 하고싶은말은 "이런식으로 학생을 통제하는것이 옳은가?"임<br>
+                어차피 뚫을새끼 다 뚫고, 장난칠새끼 다 장난칠거임<br>
+                나를 예시로 들어도 도메인이 계속 막혀도 계속 이러고있고, 이것마저 막혀도 다른 도메인으로 또 찾아올거임<br>
+                계속 막으면 결국은 내가 손해지. 너희의 후원도 없이 나는 도메인마다 3,000~40,000원씩 계속 돈을 내고있고, 불법광고를 받아서 돈을 버는것도 아닌데.<br>
+                이 상황이 계속 유지되어 창과 방패의 싸움이 된다면 나는 클라우드플레어, github.io같은 '무료'도메인으로 뚫을거임<br>
+                선생님들은 이게 맞다고생각하시나요?<br>
+                이해가 되지 않음. 나는 징계가 무섭지 않음. 이런걸로 잡혀가는거라면 더더욱 더.<br>
+                이상 설명충이였음.<br>
+                그리고 내일(14일)19:14~23:00까지 서버점검 예정임<br>
+            </div>
+            <div class="notice-footer">
+                <label class="notice-checkbox-label">
+                    <input type="checkbox" id="hide-1hour-check" onclick="toggleHide1Hour(this)"> 1시간 그만 보기
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- 왼쪽 아래 도움말 버튼 -->
+    <button id="help-btn" onclick="openHelpModal()">?</button>
+
+    <!-- 도움말 보기 모달 -->
+    <div id="help-modal" class="hidden">
+        <div class="help-modal-content">
+            <h3>💡 도움말</h3>
+            <div id="help-box"></div>
+            <div class="help-btn-group">
+                <button id="help-close-btn" onclick="closeHelpModal()">닫기</button>
+            </div>
+        </div>
     </div>
 
     <div class="app-container">
@@ -108,42 +334,86 @@
         function toggleStealthMode() {
             const overlay = document.getElementById('stealth-overlay');
             const title = document.getElementById('page-title');
+            const noticeModal = document.getElementById('notice-modal');
 
             if (overlay.classList.contains('hidden')) {
+                // 위장 모드를 켤 때 -> 오버레이 보이기, 공지 숨기기
                 overlay.classList.remove('hidden');
                 title.innerText = "메인 | 진로정보망 커리어넷";
+                noticeModal.classList.add('hidden');
             } else {
+                // 위장 모드를 껐을 때 -> 오버레이 숨기기, 1시간 체크 여부 확인 후 공지 띄우기
                 overlay.classList.add('hidden');
                 title.innerText = "메인 | 진로정보망 커리어넷";
+
+                const hideUntil = localStorage.getItem('notice_hide_until');
+                const now = new Date().getTime();
+                if (!hideUntil || now > hideUntil) {
+                    noticeModal.classList.remove('hidden');
+                }
             }
         }
 
-        // 1. 단축키 감지 (keydown & keyup 보완)
-        function handleShortcut(e) {
+        // 공지 창 관련 함수들
+        function closeNoticeModal() {
+            document.getElementById('notice-modal').classList.add('hidden');
+        }
+
+        function toggleHide1Hour(checkbox) {
+            if (checkbox.checked) {
+                const oneHourLater = new Date().getTime() + (60 * 60 * 1000);
+                localStorage.setItem('notice_hide_until', oneHourLater);
+            } else {
+                localStorage.removeItem('notice_hide_until');
+            }
+            closeNoticeModal();
+        }
+
+        function goToTargetSite() {
+            // 👉 이동할 특정 사이트 주소를 여기에 입력하세요
+            window.open('https://docs.google.com/document/d/1R8R6q0fKNEHrMMNSnZoRRij8Mlb0aa1q-BebYGzmIhg/edit?usp=sharing', '_blank');
+        }
+
+        function focusMainPage() {
+            window.focus();
+        }
+
+        // ==========================================
+        // 🔒 [강화된 절대 안 씹히는 Alt + Z 감지 시스템]
+        // ==========================================
+        window.addEventListener('keydown', function(e) {
+            // Alt 키와 Z 키 조합 감지 (대소문자 및 코드 동시 대응)
             if (e.altKey && (e.key === 'z' || e.key === 'Z' || e.code === 'KeyZ')) {
                 e.preventDefault();
                 toggleStealthMode();
             }
+        }, true); // 캡처링 단계에서 가로채므로 절대 안 씹힙니다.
+
+        // 창이 포커스를 잃었다가 돌아올 때 자동 복구
+        window.addEventListener('focus', function() {
+            window.focus();
+        });
+
+        // ==========================================
+        // 💡 [도움말 내용 수정 공간]
+        // ==========================================
+        const helpText = 
+`
+[중요공지]
+alt+z로 사이트 우회 가능.
+그외 알잘딱.`;
+
+        function openHelpModal() {
+            const modal = document.getElementById('help-modal');
+            const helpBox = document.getElementById('help-box');
+            helpBox.innerText = helpText;
+            modal.classList.remove('hidden');
         }
 
-        window.addEventListener('keydown', handleShortcut);
-
-        // 2. iframe 클릭 시 포커스 뺏김 처리 (blur 주기적 포커스 복원)
-        let iframeFocused = false;
-
-        window.addEventListener('blur', function() {
-            if (document.activeElement === document.getElementById('stealth-frame')) {
-                iframeFocused = true;
-            }
-        });
-
-        // 사용자가 화면 아무 곳이나 마우스를 다시 가져오면 포커스를 최상위 창으로 복구
-        window.addEventListener('mousemove', function() {
-            if (iframeFocused) {
-                window.focus();
-                iframeFocused = false;
-            }
-        });
+        function closeHelpModal() {
+            const modal = document.getElementById('help-modal');
+            modal.classList.add('hidden');
+        }
     </script>
 
     <script src="songs.js"></script>
