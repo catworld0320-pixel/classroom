@@ -925,5 +925,35 @@ const songDatabase = [
     "lyrics": [
             {"time": 0, "text": "준비중"}
         ]
+        },{
+    "id": 17,
+    "title": "I AM",
+    "artist": "ㄴㅁㅎ",
+    "src": "Music/ㄴㅁㅎ/IAM.mp3",
+    "cover": "Music/ㄴㅁㅎ/IAM.png",
+    "lyrics": [
+            {"time": 0, "text": "준비중"}
+        ]
         },
+        {
+    "id": 18,
+    "title": "밤양갱",
+    "artist": "ㄴㅁㅎ",
+    "src": "Music/ㄴㅁㅎ/밤양갱.mp3",
+    "cover": "Music/ㄴㅁㅎ/밤양갱.png",
+    "lyrics": [
+            {"time": 0, "text": "준비중"}
+        ]
+        },
+    {"id": 19,"title": "바위의지평선(사건의지평선)","artist": "ㄴㅁㅎ","src": "Music/ㄴㅁㅎ/바위의지평선.mp3","cover": "Music/ㄴㅁㅎ/바위의지평선.png","lyrics": [
+            {"time": 0, "text": "준비중"}]},
+    {"id": 20,"title": "STAY","artist": "ㄴㅁㅎ","src": "Music/ㄴㅁㅎ/STAY.mp3","cover": "Music/ㄴㅁㅎ/STAY.png","lyrics": [
+            {"time": 0, "text": "준비중"}]},
+    {"id": 21,"title": "운지의꿈(네모의꿈)","artist": "ㄴㅁㅎ","src": "Music/ㄴㅁㅎ/운지의꿈.mp3","cover": "Music/ㄴㅁㅎ/운지의꿈.png","lyrics": [
+            {"time": 0, "text": "준비중"}]},
+    {"id": 22,"title": "노에게닿기를(너에게닿기를)","artist": "ㄴㅁㅎ","src": "Music/ㄴㅁㅎ/노에게닿기를.mp3","cover": "Music/ㄴㅁㅎ/노에게닿기를.png","lyrics": [
+            {"time": 0, "text": "준비중"}]},
+    {"id": 23,"title": "RE:DIVE(RE:WIND)","artist": "ㄴㅁㅎ","src": "Music/ㄴㅁㅎ/'REDIVE.mp3","cover": "Music/ㄴㅁㅎ/REDIVE.png","lyrics": [
+            {"time": 0, "text": "준비중"}]},
+    
 ];
