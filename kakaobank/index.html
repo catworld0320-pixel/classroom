@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>토스 계좌 화면 커스텀 뷰어</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+        height: 100%;
+            overflow: hidden;              /* 메인 페이지 스크롤 차단 */
+            overscroll-behavior: none;     /* 끌어당김/고무줄 효과 차단 */
+        }
+
+        /* 모바일(iOS)에서는 화면에 고정 */
+        @media (max-width: 639px) {
+            body {
+                position: fixed;
+                inset: 0;
+                width: 100%;
+            }
+        }
+
+        /* 내부 스크롤 영역이 끝에 닿아도 바깥으로 스크롤이 전달되지 않게 */
+        #scrollableArea {
+            overscroll-behavior: contain;
+        }
+        body {
+            font-family: 'Pretendard', sans-serif;
+            background-color: #ffffff;
+            user-select: none;
+        }
+        .custom-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background-color: rgba(0, 0, 0, 0.15);
+            border-radius: 4px;
+        }
+        .no-scrollbar {
+            scrollbar-width: none;        /* Firefox */
+            -ms-overflow-style: none;     /* 구형 Edge */
+        }
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;                /* Chrome, Safari */
+        }
+
+        /* 하단 블러 + 페이드 오버레이: 스크롤 콘텐츠 위, 버튼 바 아래 */
+        .bottom-fade {
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.85) 100%);
+            -webkit-backdrop-filter: blur(2px);
+            backdrop-filter: blur(2px);
+            -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 100%);
+            mask-image: linear-gradient(to bottom, transparent 0%, #000 100%);
+        }
+    </style>
+</head>
+<body class="flex justify-center items-center min-h-screen p-0 m-0 sm:py-6">
+
+    <!-- Mobile Device Container Frame -->
+    <div class="w-full max-w-[430px] bg-white sm:rounded-[36px] shadow-2xl overflow-hidden flex flex-col relative h-[100vh] sm:h-[920px]">
+
+        <!-- 탑바 (고정, 스크롤되지 않음) -->
+        <div id="topBar" class="absolute top-[px] left-[24px] w-[1000px] h-[0px] bg-white z-40"></div>
+
+        <!-- [이미지 레이어 2] 원본 이미지를 복제하여 상단 45px만 표시 (고정 탑바 영역)
+             - 내부 박스는 원본 이미지와 동일한 크기(컨테이너 전체)로 두어 늘어남/어긋남이 없음
+             - 바깥 래퍼가 overflow-hidden + h-[45px]로 표시 영역만 제어 -->
+        <div class="absolute top-0 left-0 w-full h-[100px] overflow-hidden z-[30] pointer-events-none">
+            <div class="absolute top-0 left-0 w-full h-[100vh] sm:h-[920px]">
+                <img src="image_b96075.png" alt="" aria-hidden="true" class="w-full h-full object-cover">
+            </div>
+        </div>
+
+        <!-- 3. SCROLLABLE AREA: 위에서 45px 아래부터 버튼 바 위까지 전체가 함께 스크롤됨 -->
+        <div id="scrollableArea" class="absolute top-[45px] left-0 right-0 bottom-[90px] overflow-y-auto no-scrollbar z-20 bg-white">
+
+            <!-- 스크롤 콘텐츠 래퍼 (이미지 + 잔액 + 거래내역이 모두 이 안에서 같이 움직임) -->
+            <div id="scrollContent" class="relative w-full overflow-hidden min-h-[calc(100vh-45px)] sm:min-h-[875px]">
+
+                <!-- [이미지 레이어 1] 스크롤 영역과 합성되는 배경 이미지
+                     원래 화면 좌표(전체 컨테이너 기준)를 그대로 유지하도록 top -45px 로 정렬 -->
+                <div class="absolute left-0 top-[-45px] w-full h-[100vh] sm:h-[920px] pointer-events-none z-0">
+                    <img src="image_b96075.png" alt="background" class="w-full h-full object-cover">
+                </div>
+
+                <!-- 1. WHITE COVER OVER ORIGINAL BALANCE AREA (원래 top 160 → 스크롤 좌표 115) -->
+                <div class="absolute top-[56px] left-[24px] w-[280px] h-[48px] bg-[#FFFFFF] z-20"></div>
+
+                <!-- Editable Balance Input Field (원래 top 155 → 스크롤 좌표 110) -->
+                <div class="absolute top-[52px] left-[27px] w-[280px] h-[52px] z-20 flex items-center">
+                    <input type="text" id="balanceInput" value="49,663원" 
+                        class="w-full text-[39px] font-bold text-gray-900 bg-transparent border-none outline-none focus:ring-0 p-0 tracking-tight"
+                        oninput="updateBalanceDisplay(this.value)">
+                </div>
+
+                <!-- 2. WHITE COVER OVER ORIGINAL TRANSACTION LIST AREA (원래 top 385 → 스크롤 좌표 340, 콘텐츠 끝까지) -->
+                <div class="absolute top-[300px] left-0 right-0 bottom-0 bg-[#FFFFFF] z-10"></div>
+
+                <!-- TRANSACTION CONTAINER -->
+                <div class="relative z-20 px-6 pt-[352px] pb-8 space-y-6">
+
+                    <!-- 구분선 (---) -->
+                    <div class="border-t border-gray-100 my-4"></div>
+
+                    <div id="transactionContainer" class="space-y-6">
+                        <!-- Dynamic Transactions injected here -->
+                    </div>
+                    <div class="h-12"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3-1. 스크롤 영역 하단 블러 + 페이드 (스크롤 영역 하단에만 적용, 클릭 방해 없음) -->
+        <div class="bottom-fade absolute left-0 right-[0px] bottom-[90px] h-[48px] z-[25] pointer-events-none"></div>
+
+        <!-- 4. STICKY BOTTOM ACTION BAR (가져오기 / 이체하기) -->
+        <div class="absolute bottom-0 left-0 right-0 h-[110px] bg-white z-30 px-6 flex items-center justify-between gap-3">
+            <button onclick="showAlert('가져오기 버튼이 클릭되었습니다.')" class="w-1/2 h-[70px] bg-[#333d4b] hover:bg-[#212832] text-white font-semibold rounded-2xl text-[16px] transition shadow-sm flex items-center justify-center">
+                가져오기
+            </button>
+            <button onclick="showAlert('이체하기 버튼이 클릭되었습니다.')" class="w-1/2 h-[70px] bg-[#ffeb00] hover:bg-[#fdf055] text-gray-900 font-semibold rounded-2xl text-[16px] transition shadow-sm flex items-center justify-center">
+                이체하기
+            </button>
+        </div>
+
+        <!-- 5. EDITING DRAWER / MODAL PANEL -->
+        <div id="editPanel" class="absolute inset-x-0 bottom-0 top-[100px] bg-white z-50 rounded-t-[32px] shadow-2xl p-6 flex flex-col transition-transform duration-300 transform translate-y-full border-t border-gray-200">
+            <div class="flex justify-between items-center mb-4 pb-3 border-b border-gray-100">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🛠️</span>
+                    <h3 class="text-base font-bold text-gray-900">계좌 화면 커스텀 편집기</h3>
+                </div>
+                <button onclick="toggleEditPanel()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 font-bold">✕</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto space-y-5 pr-1 no-scrollbar text-sm pb-6">
+                <!-- Balance Edit -->
+                <div class="bg-gray-50 p-3.5 rounded-2xl border border-gray-100">
+                    <label class="block font-bold text-gray-800 mb-1.5 text-xs uppercase tracking-wider">상단 잔액 설정</label>
+                    <input type="text" id="panelBalanceInput" class="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 focus:outline-none focus:border-blue-500 font-semibold bg-white" oninput="syncBalance(this.value)">
+                </div>
+
+                <!-- Transaction Lists Edit -->
+                <div>
+                    <div class="flex justify-between items-center mb-2.5">
+                        <label class="font-bold text-gray-800 text-xs uppercase tracking-wider">거래 내역 목록 관리</label>
+                        <button onclick="addGroup()" class="bg-blue-50 hover:bg-blue-100 text-blue-600 px-3 py-1.5 rounded-xl text-xs font-bold transition">+ 날짜 그룹 추가</button>
+                    </div>
+                    <div id="txEditorList" class="space-y-4">
+                        <!-- Dynamic Group Editor items -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="pt-3 border-t border-gray-100">
+                <button onclick="toggleEditPanel()" class="w-full py-3.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-2xl transition shadow-md">적용 완료</button>
+            </div>
+        </div>
+
+        <!-- Custom Alert Modal -->
+        <div id="customAlert" class="absolute inset-0 bg-black/40 backdrop-blur-xs z-50 hidden flex items-center justify-center p-6">
+            <div class="bg-white rounded-3xl p-6 w-full max-w-[280px] shadow-2xl text-center space-y-4">
+                <p id="alertMessage" class="text-gray-800 font-medium text-sm leading-relaxed"></p>
+                <button onclick="closeAlert()" class="w-full py-3 bg-gray-900 hover:bg-black text-white font-bold rounded-xl transition">확인</button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Initial state data matching screenshot exactly
+        let appData = {
+            balance: "3,032,102원",
+            groups: [
+                {
+                    date: "10.12",
+                    items: [
+                        { name: "장지훈", time: "02:31", amount: "10,000원", balance: "3,032,102원" },
+                    ]
+                },
+                {
+                    date: "10.11",
+                    items: [
+                        { name: "김진성", time: "23:31", amount: "10,000원", balance: "3,022,102원" },
+                        { name: "김현호", time: "23:12", amount: "4,000원", balance: "3,012,102원" },
+                        { name: "송기현", time: "22:42", amount: "2,000원", balance: "3,008,102원" },
+                        { name: "우민수", time: "22:05", amount: "5,000원", balance: "3,006,102원" },
+                        { name: "토스김건우", time: "21:12", amount: "5,000원", balance: "3,001,102원" },
+                        { name: "진호준", time: "20:48", amount: "5,000원", balance: "2,996,102원" },
+                        { name: "임성현", time: "20:19", amount: "3,000원", balance: "2,991,102원" },
+                        { name: "윤인선", time: "19:12", amount: "329원", balance: "2,988,102원" },
+                        { name: "헤렌", time: "18:43", amount: "1,000원", balance: "2,987,773원" },
+                        { name: "사랑해", time: "17:15", amount: "126,611원", balance: "2,986,773원" },
+                        { name: "신희준", time: "16:58", amount: "242원", balance: "2,860,162원" },
+                        { name: "정하늘", time: "16:04", amount: "30원", balance: "2,859,920원" },
+                        { name: "이도훈", time: "15:32", amount: "2,600원", balance: "2,859,890원" },
+                        { name: "뇨끼", time: "14:57", amount: "1,700원", balance: "2,857,290원" },
+                        { name: "삼일", time: "14:31", amount: "290원", balance: "2,855,590원" },
+                        { name: "김은별", time: "14:16", amount: "10,010원", balance: "2,855,300원" },
+                        { name: "응나야", time: "13:35", amount: "9,000원", balance: "2,845,290원" },
+                        { name: "이우영", time: "13:08", amount: "10,000원", balance: "2,836,890원" },
+                        { name: "백소윤", time: "13:07", amount: "15,000원", balance: "2,826,890원" },
+                        { name: "김태윤", time: "12:58", amount: "1원", balance: "2,811,890원" },
+                        { name: "박소율", time: "12:45", amount: "1,500원", balance: "2,811,889원" },
+                        { name: "최서진", time: "12:31", amount: "5원", balance: "2,810,389원" },
+                        { name: "정민서", time: "12:18", amount: "2,000원", balance: "2,810,384원" },
+                        { name: "강도현", time: "12:05", amount: "8원", balance: "2,808,384원" },
+                        { name: "조예은", time: "11:52", amount: "1,000원", balance: "2,808,376원" },
+                        { name: "윤시우", time: "11:40", amount: "10원", balance: "2,807,376원" },
+                        { name: "장하윤", time: "11:27", amount: "25,000원", balance: "2,807,366원" },
+                        { name: "임건우", time: "11:15", amount: "2원", balance: "2,782,366원" },
+                        { name: "한지안", time: "11:02", amount: "1,200원", balance: "2,782,364원" },
+                        { name: "오유진", time: "10:48", amount: "9원", balance: "2,781,164원" },
+                        { name: "서현우", time: "10:35", amount: "3,500원", balance: "2,781,155원" },
+                        { name: "신채원", time: "10:22", amount: "4원", balance: "2,777,655원" },
+                        { name: "권우진", time: "10:10", amount: "500원", balance: "2,777,651원" },
+                        { name: "황지민", time: "09:55", amount: "10,000원", balance: "2,777,151원" },
+                        { name: "안시아", time: "09:42", amount: "1원", balance: "2,767,151원" },
+                        { name: "송민재", time: "09:30", amount: "1,500원", balance: "2,767,150원" },
+                        { name: "류다은", time: "09:18", amount: "8원", balance: "2,765,650원" },
+                        { name: "전준혁", time: "09:05", amount: "3,000원", balance: "2,765,642원" },
+                        { name: "홍아린", time: "08:50", amount: "2원", balance: "2,762,642원" },
+                        { name: "고태양", time: "08:38", amount: "50,000원", balance: "2,762,640원" },
+                        { name: "문지유", time: "08:25", amount: "5원", balance: "2,712,640원" },
+                        { name: "양유찬", time: "08:11", amount: "2,000원", balance: "2,712,635원" },
+                        { name: "손소율", time: "07:58", amount: "10원", balance: "2,710,635원" },
+                        { name: "배승우", time: "07:44", amount: "1,000원", balance: "2,710,625원" },
+                        { name: "백지아", time: "07:30", amount: "9원", balance: "2,709,625원" },
+                        { name: "허준서", time: "07:15", amount: "8,000원", balance: "2,709,616원" },
+                    ]
+                },
+                {
+                    date: "10.11",
+                    items: [
+                        { name: "유예나", time: "22:50", amount: "4원", balance: "2,701,616원" },
+                        { name: "남윤호", time: "22:15", amount: "1,500원", balance: "2,701,612원" },
+                        { name: "심아린", time: "21:40", amount: "1원", balance: "2,700,112원" },
+                        { name: "노성민", time: "21:05", amount: "12,000원", balance: "2,700,111원" },
+                        { name: "하채아", time: "20:20", amount: "5원", balance: "2,688,111원" },
+                        { name: "곽도윤", time: "19:45", amount: "2원", balance: "2,688,106원" },
+                        { name: "성민서", time: "19:10", amount: "30,000원", balance: "2,688,104원" },
+                        { name: "차주원", time: "18:35", amount: "8원", balance: "2,658,104원" },
+                        { name: "주나은", time: "18:00", amount: "1,000원", balance: "2,658,096원" },
+                        { name: "우현준", time: "17:25", amount: "10원", balance: "2,657,096원" },
+                        { name: "민지안", time: "16:50", amount: "4,500원", balance: "2,657,086원" },
+                        { name: "유시현", time: "16:15", amount: "9원", balance: "2,652,586원" },
+                        { name: "진은우", time: "15:40", amount: "2,000원", balance: "2,652,577원" },
+                        { name: "지수빈", time: "15:05", amount: "1원", balance: "2,650,577원" },
+                        { name: "엄태현", time: "14:20", amount: "20,000원", balance: "2,650,576원" },
+                        { name: "채아윤", time: "13:45", amount: "5원", balance: "2,630,576원" },
+                        { name: "원동현", time: "13:10", amount: "1,500원", balance: "2,630,571원" },
+                        { name: "천다인", time: "12:35", amount: "2원", balance: "2,629,071원" },
+                        { name: "방민규", time: "12:00", amount: "100,000원", balance: "2,629,069원" },
+                        { name: "공서윤", time: "11:25", amount: "8원", balance: "2,529,069원" },
+                        { name: "현지원", time: "10:50", amount: "10원", balance: "2,529,061원" },
+                        { name: "함준영", time: "10:15", amount: "1,000원", balance: "2,529,051원" },
+                        { name: "염시아", time: "09:40", amount: "4원", balance: "2,528,051원" },
+                        { name: "변건우", time: "09:10", amount: "7,000원", balance: "2,528,047원" },
+                        { name: "석하은", time: "08:45", amount: "65,000원", balance: "2,521,047원" },
+                        { name: "선우진", time: "08:30", amount: "9원", balance: "2,456,047원" },
+                        { name: "이서연", time: "08:20", amount: "35,600원", balance: "2,456,038원" },
+                        { name: "김민준", time: "08:12", amount: "56원", balance: "2,420,438원" }
+                    ]
+                },
+                {
+                    date: "10.10",
+                    items: [
+                                                { name: "유예나", time: "22:50", amount: "4원", balance: "2,701,616원" },
+                        { name: "남윤호", time: "22:15", amount: "1,500원", balance: "2,701,612원" },
+                        { name: "심아린", time: "21:40", amount: "1원", balance: "2,700,112원" },
+                        { name: "노성민", time: "21:05", amount: "12,000원", balance: "2,700,111원" },
+                        { name: "하채아", time: "20:20", amount: "5원", balance: "2,688,111원" },
+                        { name: "곽도윤", time: "19:45", amount: "2원", balance: "2,688,106원" },
+                        { name: "성민서", time: "19:10", amount: "30,000원", balance: "2,688,104원" },
+                        { name: "차주원", time: "18:35", amount: "8원", balance: "2,658,104원" },
+                        { name: "주나은", time: "18:00", amount: "1,000원", balance: "2,658,096원" },
+                        { name: "우현준", time: "17:25", amount: "10원", balance: "2,657,096원" },
+                        { name: "민지안", time: "16:50", amount: "4,500원", balance: "2,657,086원" },
+                        { name: "유시현", time: "16:15", amount: "9원", balance: "2,652,586원" },
+                        { name: "진은우", time: "15:40", amount: "2,000원", balance: "2,652,577원" },
+                        { name: "지수빈", time: "15:05", amount: "1원", balance: "2,650,577원" },
+                        { name: "엄태현", time: "14:20", amount: "20,000원", balance: "2,650,576원" },
+                        { name: "채아윤", time: "13:45", amount: "5원", balance: "2,630,576원" },
+                        { name: "원동현", time: "13:10", amount: "1,500원", balance: "2,630,571원" },
+                        { name: "천다인", time: "12:35", amount: "2원", balance: "2,629,071원" },
+                        { name: "방민규", time: "12:00", amount: "100,000원", balance: "2,629,069원" },
+                        { name: "공서윤", time: "11:25", amount: "8원", balance: "2,529,069원" },
+                        { name: "현지원", time: "10:50", amount: "10원", balance: "2,529,061원" },
+                        { name: "함준영", time: "10:15", amount: "1,000원", balance: "2,529,051원" },
+                        { name: "염시아", time: "09:40", amount: "4원", balance: "2,528,051원" },
+                        { name: "변건우", time: "09:10", amount: "7,000원", balance: "2,528,047원" },
+                        { name: "석하은", time: "08:45", amount: "65,000원", balance: "2,521,047원" },
+                        { name: "선우진", time: "08:30", amount: "9원", balance: "2,456,047원" },
+                        { name: "이서연", time: "08:20", amount: "35,600원", balance: "2,456,038원" },
+                        { name: "김민준", time: "08:12", amount: "56원", balance: "2,420,438원" }
+                    ]
+                },
+                                {
+                    date: "10.09",
+                    items: [
+                        { name: "도성훈", time: "13:07", amount: "1,200원", balance: "2,420,382원" },
+                        { name: "표지민", time: "13:02", amount: "15원", balance: "2,419,182원" },
+                        { name: "우태경", time: "12:55", amount: "5,000원", balance: "2,419,167원" },
+                        { name: "명승현", time: "12:48", amount: "2원", balance: "2,414,167원" },
+                        { name: "소다솜", time: "12:41", amount: "10,000원", balance: "2,414,165원" },
+                        { name: "구본욱", time: "12:33", amount: "8원", balance: "2,404,165원" },
+                        { name: "감동현", time: "12:26", amount: "1,500원", balance: "2,404,157원" },
+                        { name: "탁지원", time: "12:19", amount: "1원", balance: "2,402,657원" },
+                        { name: "진서준", time: "12:12", amount: "3,000원", balance: "2,402,656원" },
+                        { name: "피유진", time: "12:04", amount: "4원", balance: "2,399,656원" },
+                        { name: "길도아", time: "11:57", amount: "18,500원", balance: "2,399,652원" },
+                        { name: "선우현", time: "11:49", amount: "10원", balance: "2,381,152원" },
+                        { name: "제갈민", time: "11:41", amount: "500원", balance: "2,381,142원" },
+                        { name: "독고율", time: "11:34", amount: "9원", balance: "2,380,642원" },
+                        { name: "황보성", time: "11:26", amount: "2,000원", balance: "2,380,633원" },
+                        { name: "사공훈", time: "11:18", amount: "7원", balance: "2,378,633원" },
+                        { name: "남궁린", time: "11:10", amount: "12,000원", balance: "2,378,626원" },
+                        { name: "서문빈", time: "11:01", amount: "3원", balance: "2,366,626원" },
+                        { name: "어준혁", time: "10:53", amount: "1,000원", balance: "2,366,623원" },
+                        { name: "용태희", time: "10:45", amount: "6원", balance: "2,365,623원" },
+                        { name: "간동하", time: "10:37", amount: "4,200원", balance: "2,365,617원" },
+                        { name: "갈성준", time: "10:29", amount: "2원", balance: "2,361,417원" },
+                        { name: "경지호", time: "10:20", amount: "15,000원", balance: "2,361,415원" },
+                        { name: "계아인", time: "10:12", amount: "5원", balance: "2,346,415원" },
+                        { name: "고봉준", time: "10:03", amount: "800원", balance: "2,346,410원" },
+                        { name: "곡유성", time: "09:55", amount: "1원", balance: "2,345,610원" },
+                        { name: "공태원", time: "09:46", amount: "2,500원", balance: "2,345,609원" },
+                        { name: "곽범진", time: "09:38", amount: "10원", balance: "2,343,109원" },
+                        { name: "구자현", time: "09:29", amount: "4원", balance: "2,343,099원" },
+                        { name: "국도건", time: "09:21", amount: "6,000원", balance: "2,343,095원" },
+                        { name: "군유준", time: "09:12", amount: "9원", balance: "2,337,095원" },
+                        { name: "궁선우", time: "09:03", amount: "1,500원", balance: "2,337,086원" },
+                        { name: "콰성재", time: "08:54", amount: "3원", balance: "2,335,586원" },
+                        { name: "금시언", time: "08:45", amount: "11,000원", balance: "2,335,583원" },
+                        { name: "기동주", time: "08:36", amount: "2원", balance: "2,324,583원" },
+                        { name: "길유찬", time: "08:27", amount: "500원", balance: "2,324,581원" },
+                        { name: "나건우", time: "08:18", amount: "7원", balance: "2,324,081원" },
+                        { name: "남궁솔", time: "08:09", amount: "8,500원", balance: "2,324,074원" },
+                        { name: "노도윤", time: "08:00", amount: "1원", balance: "2,315,574원" },
+                        { name: "도유진", time: "07:51", amount: "1,000원", balance: "2,315,573원" },
+                        { name: "도성재", time: "07:42", amount: "5원", balance: "2,314,573원" },
+                        { name: "동지안", time: "07:33", amount: "14,000원", balance: "2,314,568원" },
+                        { name: "두태린", time: "07:24", amount: "8원", balance: "2,300,568원" },
+                        { name: "라민서", time: "07:15", amount: "2,000원", balance: "2,300,560원" }
+                    ]
+                },
+                                {
+                    date: "10.08",
+                    items: [
+                        { name: "마동혁", time: "22:50", amount: "10원", balance: "2,298,560원" },
+                        { name: "만소현", time: "22:41", amount: "3,200원", balance: "2,298,550원" },
+                        { name: "명지후", time: "22:32", amount: "4원", balance: "2,295,350원" },
+                        { name: "모성민", time: "22:23", amount: "1,500원", balance: "2,295,346원" },
+                        { name: "목진우", time: "22:14", amount: "2원", balance: "2,293,846원" },
+                        { name: "묘채원", time: "22:05", amount: "9,000원", balance: "2,293,844원" },
+                        { name: "묵도경", time: "21:56", amount: "6원", balance: "2,284,844원" },
+                        { name: "문경민", time: "21:47", amount: "500원", balance: "2,284,838원" },
+                        { name: "민승아", time: "21:38", amount: "1원", balance: "2,284,338원" },
+                        { name: "박건호", time: "21:29", amount: "16,000원", balance: "2,284,337원" },
+                        { name: "반예준", time: "21:20", amount: "8원", balance: "2,268,337원" },
+                        { name: "방유나", time: "21:11", amount: "2,000원", balance: "2,268,329원" },
+                        { name: "배서진", time: "21:02", amount: "3원", balance: "2,266,329원" },
+                        { name: "백상우", time: "20:53", amount: "10원", balance: "2,266,326원" },
+                        { name: "범지우", time: "20:44", amount: "5원", balance: "2,266,316원" },
+                        { name: "변수호", time: "20:35", amount: "1,000원", balance: "2,266,311원" },
+                        { name: "복하은", time: "20:26", amount: "7원", balance: "2,265,311원" },
+                        { name: "봉시현", time: "20:17", amount: "7,500원", balance: "2,265,304원" },
+                        { name: "부태건", time: "20:08", amount: "2원", balance: "2,257,804원" },
+                        { name: "비유라", time: "19:59", amount: "1,500원", balance: "2,257,802원" },
+                        { name: "빈성호", time: "19:50", amount: "9원", balance: "2,256,302원" },
+                        { name: "사도현", time: "19:41", amount: "4,000원", balance: "2,256,293원" },
+                        { name: "상유빈", time: "19:32", amount: "1원", balance: "2,252,293원" },
+                        { name: "서재민", time: "19:23", amount: "13,000원", balance: "2,252,292원" },
+                        { name: "석동하", time: "19:14", amount: "4원", balance: "2,239,292원" },
+                        { name: "선우담", time: "19:05", amount: "600원", balance: "2,239,288원" },
+                        { name: "설가은", time: "18:56", amount: "8원", balance: "2,238,688원" },
+                        { name: "섭지환", time: "18:47", amount: "2,000원", balance: "2,238,680원" },
+                        { name: "성원준", time: "18:38", amount: "5원", balance: "2,236,680원" },
+                        { name: "소동우", time: "18:29", amount: "10원", balance: "2,236,675원" },
+                        { name: "손지민", time: "18:20", amount: "1,000원", balance: "2,236,665원" },
+                        { name: "송예린", time: "18:11", amount: "3원", balance: "2,235,665원" },
+                        { name: "수도현", time: "18:02", amount: "8,800원", balance: "2,235,662원" },
+                        { name: "순유찬", time: "17:53", amount: "2원", balance: "2,226,862원" },
+                        { name: "승서하", time: "17:44", amount: "1,500원", balance: "2,226,860원" },
+                        { name: "시현준", time: "17:35", amount: "6원", balance: "2,225,360원" },
+                        { name: "신동주", time: "17:26", amount: "11,500원", balance: "2,225,354원" },
+                        { name: "심재원", time: "17:17", amount: "1원", balance: "2,213,854원" },
+                        { name: "아유진", time: "17:08", amount: "400원", balance: "2,213,853원" },
+                        { name: "안준영", time: "16:59", amount: "9원", balance: "2,213,453원" },
+                        { name: "애도건", time: "16:50", amount: "2,000원", balance: "2,213,444원" },
+                        { name: "야성재", time: "16:41", amount: "5원", balance: "2,211,444원" },
+                        { name: "양지우", time: "16:32", amount: "10원", balance: "2,211,439원" },
+                        { name: "어강민", time: "16:23", amount: "1,000원", balance: "2,211,429원" },
+                        { name: "엄태인", time: "16:14", amount: "7원", balance: "2,210,429원" }
+                    ]
+                },
+                                {
+                    date: "10.07",
+                    items: [
+                        { name: "여도윤", time: "22:10", amount: "17,000원", balance: "2,210,422원" },
+                        { name: "연서율", time: "22:01", amount: "3원", balance: "2,193,422원" },
+                        { name: "염건아", time: "21:52", amount: "1,500원", balance: "2,193,419원" },
+                        { name: "엽지한", time: "21:43", amount: "8원", balance: "2,191,919원" },
+                        { name: "영동하", time: "21:34", amount: "2원", balance: "2,191,911원" },
+                        { name: "예지안", time: "21:25", amount: "5,000원", balance: "2,191,909원" },
+                        { name: "오상민", time: "21:16", amount: "10원", balance: "2,186,909원" },
+                        { name: "옥태윤", time: "21:07", amount: "1원", balance: "2,186,899원" },
+                        { name: "온서진", time: "20:58", amount: "2,500원", balance: "2,186,898원" },
+                        { name: "옹유진", time: "20:49", amount: "4원", balance: "2,184,398원" },
+                        { name: "완도현", time: "20:40", amount: "1,000원", balance: "2,184,394원" },
+                        { name: "왕지후", time: "20:31", amount: "6원", balance: "2,183,394원" },
+                        { name: "요성훈", time: "20:22", amount: "14,500원", balance: "2,183,388원" },
+                        { name: "용은우", time: "20:13", amount: "9원", balance: "2,168,888원" },
+                        { name: "우민규", time: "20:04", amount: "2,000원", balance: "2,168,879원" },
+                        { name: "운지아", time: "19:55", amount: "5원", balance: "2,166,879원" },
+                        { name: "원서현", time: "19:46", amount: "3원", balance: "2,166,874원" },
+                        { name: "위동찬", time: "19:37", amount: "10원", balance: "2,166,871원" },
+                        { name: "유재하", time: "19:28", amount: "1,200원", balance: "2,166,861원" },
+                        { name: "육승현", time: "19:19", amount: "7원", balance: "2,165,661원" },
+                        { name: "윤도훈", time: "19:10", amount: "8,000원", balance: "2,165,654원" },
+                        { name: "은아린", time: "19:01", amount: "1원", balance: "2,157,654원" },
+                        { name: "음재민", time: "18:52", amount: "2원", balance: "2,157,653원" },
+                        { name: "이강우", time: "18:43", amount: "1,500원", balance: "2,157,651원" },
+                        { name: "이현우", time: "18:34", amount: "4원", balance: "2,156,151원" },
+                        { name: "인성진", time: "18:25", amount: "19,000원", balance: "2,156,147원" },
+                        { name: "임태주", time: "18:16", amount: "8원", balance: "2,137,147원" },
+                        { name: "자유빈", time: "18:07", amount: "10원", balance: "2,137,139원" },
+                        { name: "장서우", time: "17:58", amount: "6원", balance: "2,137,129원" },
+                        { name: "전민건", time: "17:49", amount: "3,000원", balance: "2,137,123원" },
+                        { name: "점도준", time: "17:40", amount: "5원", balance: "2,134,123원" },
+                        { name: "정태하", time: "17:31", amount: "1,000원", balance: "2,134,118원" },
+                        { name: "제유나", time: "17:22", amount: "2원", balance: "2,133,118원" },
+                        { name: "조승아", time: "17:13", amount: "9원", balance: "2,133,116원" },
+                        { name: "종건욱", time: "17:04", amount: "6,500원", balance: "2,133,107원" },
+                        { name: "좌동현", time: "16:55", amount: "1원", balance: "2,126,607원" },
+                        { name: "주성호", time: "16:46", amount: "1,500원", balance: "2,126,606원" },
+                        { name: "준시아", time: "16:37", amount: "4원", balance: "2,125,106원" },
+                        { name: "즙예성", time: "16:28", amount: "2,000원", balance: "2,125,102원" },
+                        { name: "증도율", time: "16:19", amount: "7원", balance: "2,123,102원" },
+                        { name: "지재원", time: "16:10", amount: "10원", balance: "2,123,095원" },
+                        { name: "진소민", time: "16:01", amount: "3원", balance: "2,123,085원" },
+                        { name: "차서진", time: "15:52", amount: "11,000원", balance: "2,123,082원" },
+                        { name: "창동건", time: "15:43", amount: "8원", balance: "2,112,082원" },
+                        { name: "채민준", time: "15:34", amount: "500원", balance: "2,112,074원" }
+                    ]
+                },
+                                {
+                    date: "10.06",
+                    items: [
+                        { name: "천승우", time: "21:40", amount: "2원", balance: "2,111,574원" },
+                        { name: "초도현", time: "21:31", amount: "1,500원", balance: "2,111,572원" },
+                        { name: "최가율", time: "21:22", amount: "5원", balance: "2,110,072원" },
+                        { name: "추성훈", time: "21:13", amount: "10원", balance: "2,110,067원" },
+                        { name: "탁재하", time: "21:04", amount: "1,000원", balance: "2,110,057원" },
+                        { name: "탄유찬", time: "20:55", amount: "6원", balance: "2,109,057원" },
+                        { name: "태동욱", time: "20:46", amount: "15,500원", balance: "2,109,051원" },
+                        { name: "판서윤", time: "20:37", amount: "1원", balance: "2,093,551원" },
+                        { name: "팽지훈", time: "20:28", amount: "4원", balance: "2,093,550원" },
+                        { name: "편동하", time: "20:19", amount: "2,000원", balance: "2,093,546원" },
+                        { name: "평유성", time: "20:10", amount: "8원", balance: "2,091,546원" },
+                        { name: "포성재", time: "20:01", amount: "3원", balance: "2,091,538원" },
+                        { name: "표도원", time: "19:52", amount: "10원", balance: "2,091,535원" },
+                        { name: "풍재민", time: "19:43", amount: "1,200원", balance: "2,091,525원" },
+                        { name: "피승민", time: "19:34", amount: "7원", balance: "2,090,325원" },
+                        { name: "필서준", time: "19:25", amount: "9,000원", balance: "2,090,318원" },
+                        { name: "하도영", time: "19:16", amount: "2원", balance: "2,081,318원" },
+                        { name: "학동건", time: "19:07", amount: "5원", balance: "2,081,316원" },
+                        { name: "한지후", time: "18:58", amount: "1,500원", balance: "2,081,311원" },
+                        { name: "함성민", time: "18:49", amount: "9원", balance: "2,079,811원" },
+                        { name: "해재윤", time: "18:40", amount: "10원", balance: "2,079,802원" },
+                        { name: "허준아", time: "18:31", amount: "1원", balance: "2,079,792원" },
+                        { name: "현상우", time: "18:22", amount: "4,500원", balance: "2,079,791원" },
+                        { name: "형도율", time: "18:13", amount: "3원", balance: "2,075,291원" },
+                        { name: "호승재", time: "18:04", amount: "2,000원", balance: "2,075,288원" },
+                        { name: "홍성훈", time: "17:55", amount: "6원", balance: "2,073,288원" },
+                        { name: "화지호", time: "17:46", amount: "8원", balance: "2,073,282원" },
+                        { name: "환유진", time: "17:37", amount: "12,500원", balance: "2,073,274원" },
+                        { name: "황동현", time: "17:28", amount: "4원", balance: "2,060,774원" },
+                        { name: "황보민", time: "17:19", amount: "1,000원", balance: "2,060,770원" },
+                        { name: "희지안", time: "17:10", amount: "2원", balance: "2,059,770원" },
+                        { name: "나건아", time: "17:01", amount: "5원", balance: "2,059,768원" },
+                        { name: "남궁훈", time: "16:52", amount: "10원", balance: "2,059,763원" },
+                        { name: "노상민", time: "16:43", amount: "3,500원", balance: "2,059,753원" },
+                        { name: "도유한", time: "16:34", amount: "1원", balance: "2,056,253원" },
+                        { name: "동재영", time: "16:25", amount: "7원", balance: "2,056,252원" },
+                        { name: "두성원", time: "16:16", amount: "1,500원", balance: "2,056,245원" },
+                        { name: "라승우", time: "16:07", amount: "9원", balance: "2,054,745원" },
+                        { name: "마건우", time: "15:58", amount: "18,000원", balance: "2,054,736원" },
+                        { name: "명도현", time: "15:49", amount: "3원", balance: "2,036,736원" },
+                        { name: "모재하", time: "15:40", amount: "2원", balance: "2,036,733원" },
+                        { name: "목지아", time: "15:31", amount: "2,000원", balance: "2,036,731원" },
+                        { name: "문상훈", time: "15:22", amount: "6원", balance: "2,034,731원" },
+                        { name: "민유성", time: "15:13", amount: "10원", balance: "2,034,725원" },
+                        { name: "박동준", time: "15:04", amount: "1,000원", balance: "2,034,715원" }
+                    ]
+                },
+                                {
+                    date: "10.05",
+                    items: [
+                        { name: "반재원", time: "21:15", amount: "8원", balance: "2,033,715원" },
+                        { name: "방성민", time: "21:06", amount: "1,500원", balance: "2,033,707원" },
+                        { name: "배유진", time: "20:57", amount: "4원", balance: "2,032,207원" },
+                        { name: "백지훈", time: "20:48", amount: "13,500원", balance: "2,032,203원" },
+                        { name: "변동하", time: "20:39", amount: "1원", balance: "2,018,703원" },
+                        { name: "복재승", time: "20:30", amount: "5원", balance: "2,018,702원" },
+                        { name: "봉유찬", time: "20:21", amount: "2,000원", balance: "2,018,697원" },
+                        { name: "부상우", time: "20:12", amount: "10원", balance: "2,016,697원" },
+                        { name: "빈성재", time: "20:03", amount: "2원", balance: "2,016,687원" },
+                        { name: "사도원", time: "19:54", amount: "1,000원", balance: "2,016,685원" },
+                        { name: "서재하", time: "19:45", amount: "7원", balance: "2,015,685원" },
+                        { name: "석동욱", time: "19:36", amount: "6,000원", balance: "2,015,678원" },
+                        { name: "설승우", time: "19:27", amount: "3원", balance: "2,009,678원" },
+                        { name: "성지아", time: "19:18", amount: "9원", balance: "2,009,675원" },
+                        { name: "소유성", time: "19:09", amount: "1,200원", balance: "2,009,666원" },
+                        { name: "손재민", time: "19:00", amount: "6원", balance: "2,008,466원" },
+                        { name: "송건아", time: "18:51", amount: "16,500원", balance: "2,008,460원" },
+                        { name: "승상훈", time: "18:42", amount: "1원", balance: "1,991,960원" },
+                        { name: "시동현", time: "18:33", amount: "5원", balance: "1,991,959원" },
+                        { name: "신유진", time: "18:24", amount: "2,000원", balance: "1,991,954원" },
+                        { name: "심성재", time: "18:15", amount: "10원", balance: "1,989,954원" },
+                        { name: "안재원", time: "18:06", amount: "4원", balance: "1,989,944원" },
+                        { name: "양도윤", time: "17:57", amount: "1,000원", balance: "1,989,940원" },
+                        { name: "엄지후", time: "17:48", amount: "8원", balance: "1,988,940원" },
+                        { name: "여동하", time: "17:39", amount: "2원", balance: "1,988,932원" },
+                        { name: "연유나", time: "17:30", amount: "7,500원", balance: "1,988,930원" },
+                        { name: "염승우", time: "17:21", amount: "3원", balance: "1,981,430원" },
+                        { name: "오재하", time: "17:12", amount: "1,500원", balance: "1,981,427원" },
+                        { name: "온성민", time: "17:03", amount: "9원", balance: "1,979,927원" },
+                        { name: "용지호", time: "16:54", amount: "10원", balance: "1,979,918원" },
+                        { name: "우동건", time: "16:45", amount: "1원", balance: "1,979,908원" },
+                        { name: "원재현", time: "16:36", amount: "4,000원", balance: "1,979,907원" },
+                        { name: "유성원", time: "16:27", amount: "5원", balance: "1,975,907원" },
+                        { name: "윤지아", time: "16:18", amount: "2원", balance: "1,975,902원" },
+                        { name: "이건하", time: "16:09", amount: "2,000원", balance: "1,975,900원" },
+                        { name: "임도경", time: "16:00", amount: "6원", balance: "1,973,900원" },
+                        { name: "장재원", time: "15:51", amount: "10원", balance: "1,973,894원" },
+                        { name: "전성훈", time: "15:42", amount: "1,000원", balance: "1,973,884원" },
+                        { name: "정지한", time: "15:33", amount: "7원", balance: "1,972,884원" },
+                        { name: "조동우", time: "15:24", amount: "14,000원", balance: "1,972,877원" },
+                        { name: "주승재", time: "15:15", amount: "3원", balance: "1,958,877원" },
+                        { name: "지유진", time: "15:06", amount: "8원", balance: "1,958,874원" },
+                        { name: "진성민", time: "14:57", amount: "1,500원", balance: "1,958,866원" },
+                        { name: "차재아", time: "14:48", amount: "4원", balance: "1,957,366원" },
+                        { name: "채동건", time: "14:39", amount: "2원", balance: "1,957,362원" }
+                    ]
+                },
+                                {
+                    date: "10.04",
+                    items: [
+                        { name: "천유찬", time: "22:05", amount: "10원", balance: "1,957,360원" },
+                        { name: "최성우", time: "21:56", amount: "1원", balance: "1,957,350원" },
+                        { name: "추재하", time: "21:47", amount: "3,000원", balance: "1,957,349원" },
+                        { name: "탁동현", time: "21:38", amount: "5원", balance: "1,954,349원" },
+                        { name: "태지훈", time: "21:29", amount: "2,000원", balance: "1,954,344원" },
+                        { name: "팽성진", time: "21:20", amount: "9원", balance: "1,952,344원" },
+                        { name: "편유성", time: "21:11", amount: "6원", balance: "1,952,335원" },
+                        { name: "표재민", time: "21:02", amount: "10,500원", balance: "1,952,329원" },
+                        { name: "하동건", time: "20:53", amount: "3원", balance: "1,941,829원" },
+                        { name: "한성훈", time: "20:44", amount: "1,000원", balance: "1,941,826원" },
+                        { name: "함지아", time: "20:35", amount: "7원", balance: "1,940,826원" },
+                        { name: "허동하", time: "20:26", amount: "2원", balance: "1,940,819원" },
+                        { name: "현재하", time: "20:17", amount: "8원", balance: "1,940,817원" },
+                        { name: "홍유성", time: "20:08", amount: "1,500원", balance: "1,940,809원" },
+                        { name: "황성원", time: "19:59", amount: "4원", balance: "1,939,309원" },
+                        { name: "황보진", time: "19:50", amount: "12,000원", balance: "1,939,305원" },
+                        { name: "가재민", time: "19:41", amount: "1원", balance: "1,927,305원" },
+                        { name: "간동하", time: "19:32", amount: "10원", balance: "1,927,304원" },
+                        { name: "갈성아", time: "19:23", amount: "5원", balance: "1,927,294원" },
+                        { name: "감도윤", time: "19:14", amount: "2,000원", balance: "1,927,289원" },
+                        { name: "강유진", time: "19:05", amount: "8원", balance: "1,925,289원" },
+                        { name: "견재현", time: "18:56", amount: "6원", balance: "1,925,281원" },
+                        { name: "경동우", time: "18:47", amount: "1,000원", balance: "1,925,275원" },
+                        { name: "계성진", time: "18:38", amount: "3원", balance: "1,924,275원" },
+                        { name: "고지아", time: "18:29", amount: "9원", balance: "1,924,272원" },
+                        { name: "곡동하", time: "18:20", amount: "17,500원", balance: "1,924,263원" },
+                        { name: "공재원", time: "18:11", amount: "2원", balance: "1,906,763원" },
+                        { name: "곽성호", time: "18:02", amount: "4원", balance: "1,906,761원" },
+                        { name: "관유진", time: "17:53", amount: "1,500원", balance: "1,906,757원" },
+                        { name: "방지후", time: "17:44", amount: "7원", balance: "1,905,257원" },
+                        { name: "구재하", time: "17:35", amount: "10원", balance: "1,905,250원" },
+                        { name: "국성훈", time: "17:26", amount: "5원", balance: "1,905,240원" },
+                        { name: "군동건", time: "17:17", amount: "2,000원", balance: "1,905,235원" },
+                        { name: "궁지아", time: "17:08", amount: "1원", balance: "1,903,235원" },
+                        { name: "콰재민", time: "16:59", amount: "8원", balance: "1,903,234원" },
+                        { name: "금동하", time: "16:50", amount: "3원", balance: "1,903,226원" },
+                        { name: "기유성", time: "16:41", amount: "5,500원", balance: "1,903,223원" },
+                        { name: "길성우", time: "16:32", amount: "6원", balance: "1,897,723원" },
+                        { name: "나재현", time: "16:23", amount: "1,000원", balance: "1,897,717원" },
+                        { name: "남동하", time: "16:14", amount: "2원", balance: "1,896,717원" },
+                        { name: "남궁지", time: "16:05", amount: "9원", balance: "1,896,715원" },
+                        { name: "노성진", time: "15:56", amount: "4원", balance: "1,896,706원" },
+                        { name: "도유진", time: "15:47", amount: "13,000원", balance: "1,896,702원" },
+                        { name: "동재민", time: "15:38", amount: "10원", balance: "1,883,702원" },
+                        { name: "두동건", time: "15:29", amount: "5원", balance: "1,883,692원" }
+                    ]
+                },
+                                {
+                    date: "10.03",
+                    items: [
+                        { name: "라성훈", time: "21:30", amount: "2,000원", balance: "1,883,687원" },
+                        { name: "마유성", time: "21:21", amount: "8원", balance: "1,881,687원" },
+                        { name: "만재하", time: "21:12", amount: "1원", balance: "1,881,679원" },
+                        { name: "명성원", time: "21:03", amount: "1,500원", balance: "1,881,678원" },
+                        { name: "모동현", time: "20:54", amount: "3원", balance: "1,880,178원" },
+                        { name: "목재민", time: "20:45", amount: "7원", balance: "1,880,175원" },
+                        { name: "묘유진", time: "20:36", amount: "10원", balance: "1,880,168원" },
+                        { name: "묵성호", time: "20:27", amount: "4원", balance: "1,880,158원" },
+                        { name: "문동하", time: "20:18", amount: "15,000원", balance: "1,880,154원" },
+                        { name: "민재현", time: "20:09", amount: "2원", balance: "1,865,154원" },
+                        { name: "박성훈", time: "20:00", amount: "6원", balance: "1,865,152원" },
+                        { name: "반유성", time: "19:51", amount: "1,000원", balance: "1,865,146원" },
+                        { name: "방동현", time: "19:42", amount: "9원", balance: "1,864,146원" },
+                        { name: "배재민", time: "19:33", amount: "5원", balance: "1,864,137원" },
+                        { name: "백성진", time: "19:24", amount: "10원", balance: "1,864,132원" },
+                        { name: "범유진", time: "19:15", amount: "800원", balance: "1,864,122원" },
+                        { name: "변동건", time: "19:06", amount: "1원", balance: "1,863,322원" },
+                        { name: "복재하", time: "18:57", amount: "3원", balance: "1,863,321원" },
+                        { name: "봉성훈", time: "18:48", amount: "2,000원", balance: "1,863,318원" },
+                        { name: "부동현", time: "18:39", amount: "8원", balance: "1,861,318원" },
+                        { name: "비유성", time: "18:30", amount: "4원", balance: "1,861,310원" },
+                        { name: "빈재민", time: "18:21", amount: "1,500원", balance: "1,861,306원" },
+                        { name: "사성진", time: "18:12", amount: "10원", balance: "1,859,806원" },
+                        { name: "상동하", time: "18:03", amount: "2원", balance: "1,859,796원" },
+                        { name: "서재현", time: "17:54", amount: "6원", balance: "1,859,794원" },
+                        { name: "석유진", time: "17:45", amount: "10,000원", balance: "1,859,788원" },
+                        { name: "선우성", time: "17:36", amount: "5원", balance: "1,849,788원" },
+                        { name: "설동현", time: "17:27", amount: "1원", balance: "1,849,783원" },
+                        { name: "섭재민", time: "17:18", amount: "1,000원", balance: "1,849,782원" },
+                        { name: "성성훈", time: "17:09", amount: "7원", balance: "1,848,782원" },
+                        { name: "소동하", time: "17:00", amount: "3원", balance: "1,848,775원" },
+                        { name: "손유성", time: "16:51", amount: "9원", balance: "1,848,772원" },
+                        { name: "송재현", time: "16:42", amount: "2,000원", balance: "1,848,763원" },
+                        { name: "수동건", time: "16:33", amount: "4원", balance: "1,846,763원" },
+                        { name: "순성진", time: "16:24", amount: "10원", balance: "1,846,759원" },
+                        { name: "승유진", time: "16:15", amount: "8원", balance: "1,846,749원" },
+                        { name: "시재하", time: "16:06", amount: "1,200원", balance: "1,846,741원" },
+                        { name: "신동현", time: "15:57", amount: "2원", balance: "1,845,541원" },
+                        { name: "심성호", time: "15:48", amount: "5원", balance: "1,845,539원" },
+                        { name: "아유성", time: "15:39", amount: "11,000원", balance: "1,845,534원" },
+                        { name: "안재민", time: "15:30", amount: "1원", balance: "1,834,534원" },
+                        { name: "애동하", time: "15:21", amount: "3원", balance: "1,834,533원" },
+                        { name: "야성훈", time: "15:12", amount: "500원", balance: "1,834,530원" },
+                        { name: "양유진", time: "15:03", amount: "4,700원", balance: "1,834,030원" },
+                        { name: "어재현", time: "14:54", amount: "30원", balance: "1,829,330원" }
+                    ]
+                },
+            ]
+        };
+
+        window.onload = function() {
+            document.getElementById('balanceInput').value = appData.balance;
+            document.getElementById('panelBalanceInput').value = appData.balance;
+            renderTransactions();
+            renderEditorForm();
+        };
+
+        function updateBalanceDisplay(val) {
+            appData.balance = val;
+            document.getElementById('panelBalanceInput').value = val;
+        }
+
+        function syncBalance(val) {
+            appData.balance = val;
+            document.getElementById('balanceInput').value = val;
+        }
+
+        // Render main view transactions
+        function renderTransactions() {
+            const container = document.getElementById('transactionContainer');
+            let html = '';
+
+            appData.groups.forEach((group, gIdx) => {
+                html += `
+                    <div>
+                        <div class="text-[15px] font-bold text-gray-800 mb-3">${group.date}</div>
+                        <div class="space-y-4">
+                `;
+
+                group.items.forEach((item, iIdx) => {
+                    // Check if amount starts with '-' -> Black, else Blue (#3182ce)
+                    const isNegative = item.amount.trim().startsWith('-');
+                    const amountColorClass = isNegative ? 'text-gray-900 font-bold' : 'text-[#3182ce] font-bold';
+
+                    html += `
+                        <div class="flex justify-between items-start py-0.5">
+                            <div>
+                                <div class="text-[15px] font-semibold text-gray-900">${item.name}</div>
+                                <div class="text-[13px] text-gray-400 mt-0.5">${item.time}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-[15px] ${amountColorClass}">${item.amount}</div>
+                                <div class="text-[13px] text-gray-400 mt-0.5">${item.balance}</div>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `</div></div>`;
+            });
+
+            container.innerHTML = html;
+        }
+
+        // Render editor panel form
+        function renderEditorForm() {
+            const editorList = document.getElementById('txEditorList');
+            let html = '';
+
+            appData.groups.forEach((group, gIdx) => {
+                html += `
+                    <div class="p-3.5 bg-gray-50 rounded-2xl border border-gray-200/80 space-y-3">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-bold text-gray-500 w-12">날짜:</span>
+                            <input type="text" value="${group.date}" onchange="updateGroupDate(${gIdx}, this.value)" class="flex-1 border border-gray-300 rounded-xl px-3 py-1.5 text-xs bg-white font-bold">
+                            <button onclick="removeGroup(${gIdx})" class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1">삭제</button>
+                        </div>
+                        <div class="space-y-2.5 pl-2 border-l-2 border-blue-200">
+                `;
+
+                group.items.forEach((item, iIdx) => {
+                    html += `
+                        <div class="bg-white p-2.5 rounded-xl border border-gray-200 space-y-2 shadow-2xs">
+                            <div class="flex gap-2">
+                                <input type="text" placeholder="입금자명" value="${item.name}" onchange="updateItem(${gIdx}, ${iIdx}, 'name', this.value)" class="w-1/2 border border-gray-300 rounded-lg px-2.5 py-1 text-xs">
+                                <input type="text" placeholder="시간" value="${item.time}" onchange="updateItem(${gIdx}, ${iIdx}, 'time', this.value)" class="w-1/2 border border-gray-300 rounded-lg px-2.5 py-1 text-xs">
+                            </div>
+                            <div class="flex gap-2">
+                                <input type="text" placeholder="액수 (-50,000원)" value="${item.amount}" onchange="updateItem(${gIdx}, ${iIdx}, 'amount', this.value)" class="w-1/2 border border-gray-300 rounded-lg px-2.5 py-1 text-xs">
+                                <input type="text" placeholder="잔액" value="${item.balance}" onchange="updateItem(${gIdx}, ${iIdx}, 'balance', this.value)" class="w-1/2 border border-gray-300 rounded-lg px-2.5 py-1 text-xs">
+                            </div>
+                            <div class="flex justify-end">
+                                <button onclick="removeItem(${gIdx}, ${iIdx})" class="text-red-400 hover:text-red-600 text-[11px] font-semibold">내역 삭제</button>
+                            </div>
+                        </div>
+                    `;
+                });
+
+                html += `
+                            <button onclick="addItem(${gIdx})" class="w-full py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-600 rounded-xl text-xs font-bold transition mt-1">+ 거래내역 추가</button>
+                        </div>
+                    </div>
+                `;
+            });
+
+            editorList.innerHTML = html;
+        }
+
+        // Data mutators
+        function updateGroupDate(gIdx, val) {
+            appData.groups[gIdx].date = val;
+            renderTransactions();
+        }
+
+        function updateItem(gIdx, iIdx, field, val) {
+            appData.groups[gIdx].items[iIdx][field] = val;
+            renderTransactions();
+        }
+
+        function removeItem(gIdx, iIdx) {
+            appData.groups[gIdx].items.splice(iIdx, 1);
+            renderTransactions();
+            renderEditorForm();
+        }
+
+        function addItem(gIdx) {
+            appData.groups[gIdx].items.push({ name: "새 거래", time: "12:00", amount: "-10,000원", balance: "0원" });
+            renderTransactions();
+            renderEditorForm();
+        }
+
+        function addGroup() {
+            appData.groups.push({
+                date: "새 날짜",
+                items: [{ name: "입금자", time: "12:00", amount: "10,000원", balance: "0원" }]
+            });
+            renderTransactions();
+            renderEditorForm();
+        }
+
+        function removeGroup(gIdx) {
+            appData.groups.splice(gIdx, 1);
+            renderTransactions();
+            renderEditorForm();
+        }
+
+        function toggleEditPanel() {
+            const panel = document.getElementById('editPanel');
+            if (panel.classList.contains('translate-y-full')) {
+                panel.classList.remove('translate-y-full');
+            } else {
+                panel.classList.add('translate-y-full');
+            }
+        }
+
+        function showAlert(msg) {
+            document.getElementById('alertMessage').innerText = msg;
+            document.getElementById('customAlert').classList.remove('hidden');
+        }
+
+        function closeAlert() {
+            document.getElementById('customAlert').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
