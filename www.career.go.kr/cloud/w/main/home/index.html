@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="description" content="섭종 ㅈㅈ">
+  <title>메인 | 진로정보망 커리어넷</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17191d;
+      --muted: #777d86;
+      --line: #e9eaed;
+      --soft: #f6f7f8;
+      --accent: #344b70;
+    }
+    * { box-sizing: border-box; }
+    html { min-height: 100%; background: #fff; }
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(ellipse at 50% 35%, rgba(226,232,241,.28), transparent 48%),
+        #fff;
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans KR",
+                   "Apple SD Gothic Neo", sans-serif;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+    .topbar {
+      width: min(1120px, calc(100% - 64px));
+      margin: 0 auto;
+      height: 82px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid var(--line);
+      animation: fadeDown .8s ease both;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 12px;
+      font-weight: 750;
+      letter-spacing: .16em;
+    }
+    .brand-mark {
+      width: 25px;
+      height: 25px;
+      border: 1.5px solid #252a32;
+      border-radius: 8px;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      letter-spacing: 0;
+    }
+    .top-label {
+      color: #9297a0;
+      font-size: 10px;
+      letter-spacing: .16em;
+      font-weight: 650;
+    }
+    main {
+      width: min(760px, calc(100% - 48px));
+      margin: auto;
+      padding: 100px 0 112px;
+      text-align: center;
+      animation: reveal 1s cubic-bezier(.2,.7,.2,1) .08s both;
+    }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 9px;
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 100px;
+      color: #777d86;
+      background: rgba(255,255,255,.82);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .15em;
+    }
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #a2a7af;
+      box-shadow: 0 0 0 3px #f0f1f3;
+    }
+    h1 {
+      margin: 34px 0 18px;
+      font-size: clamp(43px, 8vw, 76px);
+      line-height: 1.12;
+      letter-spacing: -.075em;
+      font-weight: 760;
+    }
+    .accent-line {
+      width: 38px;
+      height: 3px;
+      border-radius: 4px;
+      background: var(--accent);
+      margin: 0 auto 30px;
+    }
+    .message {
+      max-width: 520px;
+      margin: 0 auto;
+      color: #626873;
+      font-size: clamp(14px, 2vw, 16px);
+      line-height: 1.95;
+      word-break: keep-all;
+      letter-spacing: -.025em;
+    }
+    .notice {
+      max-width: 490px;
+      margin: 54px auto 0;
+      padding: 20px 22px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(250,250,251,.72);
+      display: flex;
+      align-items: flex-start;
+      gap: 13px;
+      text-align: left;
+    }
+    .notice-icon {
+      flex: 0 0 20px;
+      width: 20px;
+      height: 20px;
+      border: 1px solid #d9dce1;
+      color: #777d86;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 700;
+      margin-top: 1px;
+    }
+    .notice strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .notice p {
+      margin: 0;
+      color: #858a93;
+      font-size: 11px;
+      line-height: 1.7;
+      word-break: keep-all;
+    }
+    footer {
+      width: min(1120px, calc(100% - 64px));
+      margin: 0 auto;
+      min-height: 78px;
+      border-top: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      color: #a0a4ab;
+      font-size: 10px;
+      letter-spacing: .08em;
+    }
+    footer .thanks { color: #777d86; font-weight: 650; }
+    @keyframes reveal {
+      from { opacity: 0; transform: translateY(18px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @media (max-width: 600px) {
+      .topbar { width: calc(100% - 40px); height: 68px; }
+      .top-label { font-size: 9px; }
+      main {
+        width: calc(100% - 40px);
+        padding: 82px 0 88px;
+      }
+      h1 { margin-top: 30px; }
+      .message { line-height: 1.85; }
+      .notice { margin-top: 42px; padding: 17px; }
+      footer {
+        width: calc(100% - 40px);
+        min-height: 72px;
+        font-size: 9px;
+      }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand" aria-label="서비스 안내">
+      <span>LUMA</span>
+    </div>
+    <span class="top-label">Team LUMA</span>
+  </header>
+
+  <main>
+    <div class="status">
+      <span class="status-dot" aria-hidden="true"></span>
+      SERVICE STATUS&nbsp; / &nbsp;CLOSED
+    </div>
+
+    <h1>섭종 ㅈㅈ</h1>
+    <div class="accent-line" aria-hidden="true"></div>
+
+    <p class="message">
+      뭐 이거 벌점이라나 뭐라나
+    </p>
+
+    <section class="notice" aria-label="서비스 종료 안내">
+      <span class="notice-icon" aria-hidden="true">i</span>
+      <div>
+        <strong>매우 중요한 안내</strong>
+        <p>누군가가 부적절한 매체에대해 삭제하라고했지만 업데이트는 귀찮기에 그냥 섭종함 ㅈㅈ</p>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>© <span id="year"></span> SERVICE. ALL RIGHTS RESERVED.</span>
+    <span class="thanks">Team LUMA</span>
+  </footer>
+
+  <script>
+    // 하단 저작권 연도를 자동으로 갱신합니다.
+    document.getElementById("year").textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>
