@@ -22,7 +22,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* 원래 기본 카메라 뷰 (화각 및 확대 이슈 없음) */
+    /* 카메라 화면 (하드웨어 가속 및 떨림 최소화 스타일 적용) */
     #camera {
       position: absolute;
       top: 0;
@@ -31,6 +31,7 @@
       height: 100%;
       object-fit: cover;
       z-index: 1;
+      transform: translateZ(0); /* GPU 가속 활성화로 부드러운 렌더링 유도 */
     }
 
     /* 속도계 오버레이 */
@@ -165,22 +166,38 @@
       return R * c;
     }
 
-    // 마이크(audio: false) 권한을 요청하지 않음으로써 통화모드 버그 차단
     async function initCamera() {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error('이 브라우저는 카메라 접근을 지원하지 않거나 HTTPS 연결이 아닙니다.');
         }
 
+        // 비디오 설정에 stabilization(떨림 보정) 속성 추가
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
-          video: { facingMode: { ideal: 'environment' } }
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+            // 브라우저가 지원하는 경우 하드웨어 손떨림 보정(Stabilization) 우선 적용 요청
+            advanced: [{ stabilizationMode: 'cinematic' }] 
+          }
         });
         
         video.srcObject = stream;
         await video.play();
       } catch (err) {
-        showError('카메라 오류', getCameraErrorMessage(err));
+        // advanced 속성이 지원되지 않는 구버전 기기 에러 방지를 위한 폴백(기본 설정으로 재시도)
+        try {
+          const fallbackStream = await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: { facingMode: { ideal: 'environment' } }
+          });
+          video.srcObject = fallbackStream;
+          await video.play();
+        } catch (fallbackErr) {
+          showError('카메라 오류', getCameraErrorMessage(fallbackErr));
+        }
       }
     }
 
