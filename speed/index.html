@@ -26,7 +26,7 @@
       display: none;
     }
 
-    /* 화면 전체 캔버스 (확대 없이 화면에 맞춤) */
+    /* 원래 비율 유지 및 자연스러운 화면 채우기 (object-fit: cover) */
     #canvas {
       position: absolute;
       top: 0;
@@ -37,7 +37,7 @@
       z-index: 1;
     }
 
-    /* 하단 컨트롤 영역 (버튼 및 녹화 타이머) */
+    /* 하단 컨트롤 영역 */
     .controls {
       position: absolute;
       bottom: max(35px, env(safe-area-inset-bottom));
@@ -79,7 +79,6 @@
       transition: all 0.2s ease;
     }
 
-    /* 녹화 중 버튼 스타일 */
     .shutter-btn.recording {
       border-color: rgba(255, 255, 255, 0.8);
     }
@@ -92,7 +91,6 @@
       animation: pulse 1.5s infinite;
     }
 
-    /* 녹화 시간 타이머 (버튼 오른쪽에 배치) */
     .timer-text {
       position: absolute;
       left: 90px;
@@ -111,7 +109,6 @@
       100% { transform: scale(1); }
     }
 
-    /* 에러 모달 */
     .error-overlay {
       position: absolute;
       inset: 0;
@@ -173,7 +170,6 @@
   <video id="hiddenVideo" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
 
-  <!-- 녹화 버튼 & 시간 표시 -->
   <div class="controls">
     <div class="shutter-wrapper">
       <button id="shutterBtn" class="shutter-btn" aria-label="녹화 시작/중지">
@@ -226,18 +222,15 @@
       return R * c;
     }
 
-    // 기본 화각(확대 방지) 및 주변 음 원음 수음 설정
+    // 아예 강제 고해상도 제한을 빼고 원래 기기 기본 카메라 값으로 호출
     async function initMedia() {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: 'environment' }
-            // 비디오 확대 방지를 위해 과도한 resolution 픽셀 제한 제거
-          },
+          video: { facingMode: { ideal: 'environment' } },
           audio: {
-            echoCancellation: false,  // 주변음 필터링 끄기
-            noiseSuppression: false,  // 소음 억제 끄기 (자연스러운 주변 소리 수음)
-            autoGainControl: false    // 음량 자동 조절 끄기
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
           }
         });
 
@@ -283,36 +276,32 @@
       );
     }
 
-    // Canvas 렌더링 (비디오 왜곡 및 크롭 최소화 적용)
+    // 원래 카메라 비율(꽉 차게 그리되 비율 왜곡 없이 자연스럽게)
     function drawCanvas() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        // 비디오 원래 비율을 유지하며 Canvas 크기에 맞춤
         const vWidth = video.videoWidth;
         const vHeight = video.videoHeight;
         const cWidth = canvas.width;
         const cHeight = canvas.height;
 
-        const vAspect = vWidth / vHeight;
-        const cAspect = cWidth / cHeight;
+        ctx.clearRect(0, 0, cWidth, cHeight);
+        
+        // 원본 비율을 그대로 유지하며 캔버스에 꽉 채우기 (일부 잘림 허용)
+        const vRatio = vWidth / vHeight;
+        const cRatio = cWidth / cHeight;
+        let drawW = cWidth, drawH = cHeight, offsetX = 0, offsetY = 0;
 
-        let renderW, renderH, offsetX, offsetY;
-
-        if (cAspect > vAspect) {
-          renderW = cWidth;
-          renderH = cWidth / vAspect;
-          offsetX = 0;
-          offsetY = (cHeight - renderH) / 2;
+        if (cRatio > vRatio) {
+          drawH = cWidth / vRatio;
+          offsetY = (cHeight - drawH) / 2;
         } else {
-          renderW = cHeight * vAspect;
-          renderH = cHeight;
-          offsetX = (cWidth - renderW) / 2;
-          offsetY = 0;
+          drawW = cHeight * vRatio;
+          offsetX = (cWidth - drawW) / 2;
         }
 
-        ctx.clearRect(0, 0, cWidth, cHeight);
-        ctx.drawImage(video, offsetX, offsetY, renderW, renderH);
+        ctx.drawImage(video, offsetX, offsetY, drawW, drawH);
 
-        // 속도계 렌더링 (숫자 아래 km/h)
+        // 속도계 렌더링 (-- 또는 숫자 아래 km/h)
         const speedStr = isNaN(currentSpeedKmh) ? '--' : String(currentSpeedKmh);
         const unitStr = 'km/h';
 
@@ -351,7 +340,6 @@
       canvas.style.height = window.innerHeight + 'px';
     }
 
-    // 타이머 갱신 (00:00 형식)
     function startTimer() {
       recordStartTime = Date.now();
       timerEl.textContent = '00:00';
