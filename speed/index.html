@@ -13,7 +13,7 @@
       padding: 0;
     }
 
-    /* 전체 화면 여백 제거 */
+    /* 전체 화면 여백 제거 및 원래 카메라 화각 유지 */
     html, body {
       width: 100%;
       height: 100%;
@@ -23,7 +23,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* 1. 원래 방식의 전체 화면 카메라 비디오 (확대/치우침 없음) */
+    /* 화면에 직접 보여지는 카메라 비디오 (확대/왜곡 없음) */
     #camera {
       position: absolute;
       top: 0;
@@ -34,7 +34,7 @@
       z-index: 1;
     }
 
-    /* 녹화용 숨김 캔버스 (화면에는 안 보이고 녹화 파일 생성용으로만 사용) */
+    /* 녹화용 합성 캔버스 (화면에는 안 보이고 녹화 파일 생성용) */
     #recordCanvas {
       display: none;
     }
@@ -208,7 +208,7 @@
 </head>
 <body>
 
-  <!-- 1. 원래 방식의 카메라 비디오 화면 -->
+  <!-- 카메라 비디오 화면 -->
   <video id="camera" autoplay muted playsinline></video>
 
   <!-- 녹화용 숨김 캔버스 -->
@@ -242,7 +242,7 @@
   <script>
     const video = document.getElementById('camera');
     const recordCanvas = document.getElementById('recordCanvas');
-    const rCtx = recordCanvas.getContext('2d');
+    const rCtx = recordCanvas.getContext('2d', { alpha: false });
     const speedEl = document.getElementById('speed');
     const shutterBtn = document.getElementById('shutterBtn');
     const timerEl = document.getElementById('timer');
@@ -278,7 +278,7 @@
       return R * c;
     }
 
-    // 1. 원래 방식의 카메라 화각 및 주변음 원음 수음 설정
+    // 1. 카메라 시작 (주변음 원음 수음 유지)
     async function initCamera() {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -287,12 +287,12 @@
 
         mediaStream = await navigator.mediaDevices.getUserMedia({
           audio: {
-            echoCancellation: false,  // 주변 소리 억제 끄기 (노래 소리 유지)
-            noiseSuppression: false,  // 노이즈 필터링 끄기
-            autoGainControl: false    // 음량 자동 조절 끄기
+            echoCancellation: false,
+            noiseSuppression: false,
+            autoGainControl: false
           },
           video: {
-            facingMode: { ideal: 'environment' } // 원래의 자연스러운 후면 카메라 화각 유지
+            facingMode: { ideal: 'environment' }
           }
         });
         
@@ -364,39 +364,41 @@
       timerEl.classList.add('hidden');
     }
 
-    // 4. 비디오 화면과 속도계 오버레이를 실시간으로 합쳐서 녹화하는 세팅
+    // 4. 검은 화면 방지를 위한 올바른 프레임 캡처 및 녹화 세팅
     function setupRecorder() {
-      recordCanvas.width = video.videoWidth || 1280;
-      recordCanvas.height = video.videoHeight || 720;
+      // 비디오 원본 해상도 반영 (없을 경우 기본 HD 해상도 적용)
+      recordCanvas.width = video.videoWidth || 1920;
+      recordCanvas.height = video.videoHeight || 1080;
 
       function drawRecordFrame() {
         if (!isRecording) return;
         if (video.readyState >= video.HAVE_CURRENT_DATA) {
+          // 비디오 화면을 캔버스에 정확히 그림
           rCtx.drawImage(video, 0, 0, recordCanvas.width, recordCanvas.height);
 
-          // 영상 위에 속도계 텍스트 합성
+          // 속도계 텍스트 합성
           const speedStr = String(currentKmh);
           const unitStr = 'km/h';
 
           rCtx.save();
-          const startX = 35;
-          const startY = 55;
+          const startX = 45;
+          const startY = 65;
 
-          rCtx.font = '900 85px -apple-system, BlinkMacSystemFont, sans-serif';
+          rCtx.font = '900 110px -apple-system, BlinkMacSystemFont, sans-serif';
           rCtx.textAlign = 'left';
           rCtx.textBaseline = 'top';
 
-          rCtx.lineWidth = 6;
+          rCtx.lineWidth = 8;
           rCtx.strokeStyle = '#ffffff';
           rCtx.strokeText(speedStr, startX, startY);
 
           rCtx.fillStyle = '#000000';
           rCtx.fillText(speedStr, startX, startY);
 
-          rCtx.font = '800 24px -apple-system, BlinkMacSystemFont, sans-serif';
-          rCtx.lineWidth = 3;
-          rCtx.strokeText(unitStr, startX + 4, startY + 92);
-          rCtx.fillText(unitStr, startX + 4, startY + 92);
+          rCtx.font = '800 35px -apple-system, BlinkMacSystemFont, sans-serif';
+          rCtx.lineWidth = 4;
+          rCtx.strokeText(unitStr, startX + 5, startY + 120);
+          rCtx.fillText(unitStr, startX + 5, startY + 120);
 
           rCtx.restore();
         }
@@ -411,8 +413,8 @@
       }
 
       const options = MediaRecorder.isTypeSupported('video/mp4') 
-        ? { mimeType: 'video/mp4', videoBitsPerSecond: 6000000 } 
-        : { mimeType: 'video/webm', videoBitsPerSecond: 6000000 };
+        ? { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 } 
+        : { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
 
       try {
         mediaRecorder = new MediaRecorder(canvasStream, options);
@@ -433,7 +435,6 @@
         const fileExtension = mediaRecorder.mimeType && mediaRecorder.mimeType.includes('webm') ? 'webm' : 'mp4';
         const file = new File([blob], `riding_${Date.now()}.${fileExtension}`, { type: blob.type });
 
-        // 공유 창을 통해 갤러리(비디오 저장)로 바로 직행
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
           try {
             await navigator.share({
