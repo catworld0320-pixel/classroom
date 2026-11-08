@@ -26,7 +26,7 @@
       display: none;
     }
 
-    /* 상하단 여백 없이 화면 전체를 채우는 캔버스 */
+    /* 화면 전체 캔버스 (확대 없이 화면에 맞춤) */
     #canvas {
       position: absolute;
       top: 0;
@@ -37,7 +37,7 @@
       z-index: 1;
     }
 
-    /* 아이폰 스타일 녹화 버튼 (하단 중앙) */
+    /* 하단 컨트롤 영역 (버튼 및 녹화 타이머) */
     .controls {
       position: absolute;
       bottom: max(35px, env(safe-area-inset-bottom));
@@ -45,7 +45,13 @@
       transform: translateX(-50%);
       z-index: 10;
       display: flex;
+      align-items: center;
       justify-content: center;
+    }
+
+    .shutter-wrapper {
+      position: relative;
+      display: flex;
       align-items: center;
     }
 
@@ -73,17 +79,30 @@
       transition: all 0.2s ease;
     }
 
-    /* 녹화 중 상태 (빨간색 동그라미 & 사각형 아이콘 스타일) */
+    /* 녹화 중 버튼 스타일 */
     .shutter-btn.recording {
       border-color: rgba(255, 255, 255, 0.8);
     }
 
     .shutter-btn.recording .shutter-inner {
       background-color: #ff3b30;
-      border-radius: 12px; /* 아이폰 정지 아이콘 모양 */
+      border-radius: 12px;
       width: 32px;
       height: 32px;
       animation: pulse 1.5s infinite;
+    }
+
+    /* 녹화 시간 타이머 (버튼 오른쪽에 배치) */
+    .timer-text {
+      position: absolute;
+      left: 90px;
+      color: #ffffff;
+      font-size: 18px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      white-space: nowrap;
+      pointer-events: none;
     }
 
     @keyframes pulse {
@@ -154,11 +173,14 @@
   <video id="hiddenVideo" autoplay muted playsinline></video>
   <canvas id="canvas"></canvas>
 
-  <!-- 아이폰 스타일 셔터 버튼 -->
+  <!-- 녹화 버튼 & 시간 표시 -->
   <div class="controls">
-    <button id="shutterBtn" class="shutter-btn" aria-label="녹화 시작/중지">
-      <div class="shutter-inner"></div>
-    </button>
+    <div class="shutter-wrapper">
+      <button id="shutterBtn" class="shutter-btn" aria-label="녹화 시작/중지">
+        <div class="shutter-inner"></div>
+      </button>
+      <div id="timer" class="timer-text hidden">00:00</div>
+    </div>
   </div>
 
   <div id="errorOverlay" class="error-overlay hidden">
@@ -174,6 +196,7 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const shutterBtn = document.getElementById('shutterBtn');
+    const timerEl = document.getElementById('timer');
     const errorOverlay = document.getElementById('errorOverlay');
 
     let currentSpeedKmh = 0;
@@ -184,6 +207,9 @@
     let mediaRecorder = null;
     let recordedChunks = [];
     let isRecording = false;
+
+    let recordStartTime = 0;
+    let timerInterval = null;
 
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
@@ -200,20 +226,18 @@
       return R * c;
     }
 
-    // 고화질 카메라 및 고음질 마이크 스트림 초기화
+    // 기본 화각(확대 방지) 및 주변 음 원음 수음 설정
     async function initMedia() {
       try {
         mediaStream = await navigator.mediaDevices.getUserMedia({
           video: {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 3840 },  // 가능한 최고 화질(4K) 시도
-            height: { ideal: 2160 },
-            frameRate: { ideal: 60 } // 부드러운 화면을 위한 60fps 시도
+            facingMode: { ideal: 'environment' }
+            // 비디오 확대 방지를 위해 과도한 resolution 픽셀 제한 제거
           },
           audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
+            echoCancellation: false,  // 주변음 필터링 끄기
+            noiseSuppression: false,  // 소음 억제 끄기 (자연스러운 주변 소리 수음)
+            autoGainControl: false    // 음량 자동 조절 끄기
           }
         });
 
@@ -259,11 +283,36 @@
       );
     }
 
-    // Canvas 렌더링 (숫자 아래에 km/h 배치)
+    // Canvas 렌더링 (비디오 왜곡 및 크롭 최소화 적용)
     function drawCanvas() {
       if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        // 비디오 원래 비율을 유지하며 Canvas 크기에 맞춤
+        const vWidth = video.videoWidth;
+        const vHeight = video.videoHeight;
+        const cWidth = canvas.width;
+        const cHeight = canvas.height;
 
+        const vAspect = vWidth / vHeight;
+        const cAspect = cWidth / cHeight;
+
+        let renderW, renderH, offsetX, offsetY;
+
+        if (cAspect > vAspect) {
+          renderW = cWidth;
+          renderH = cWidth / vAspect;
+          offsetX = 0;
+          offsetY = (cHeight - renderH) / 2;
+        } else {
+          renderW = cHeight * vAspect;
+          renderH = cHeight;
+          offsetX = (cWidth - renderW) / 2;
+          offsetY = 0;
+        }
+
+        ctx.clearRect(0, 0, cWidth, cHeight);
+        ctx.drawImage(video, offsetX, offsetY, renderW, renderH);
+
+        // 속도계 렌더링 (숫자 아래 km/h)
         const speedStr = isNaN(currentSpeedKmh) ? '--' : String(currentSpeedKmh);
         const unitStr = 'km/h';
 
@@ -271,7 +320,6 @@
         const startX = 35;
         const startY = 55;
 
-        // 속도 숫자 그리기 (굵은 폰트 + 외곽선)
         ctx.font = '900 85px -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
@@ -283,7 +331,6 @@
         ctx.fillStyle = '#000000';
         ctx.fillText(speedStr, startX, startY);
 
-        // 숫자 바로 아래에 km/h 단위 배치
         ctx.font = '800 24px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
         ctx.lineWidth = 3;
         ctx.strokeText(unitStr, startX + 4, startY + 92);
@@ -295,7 +342,6 @@
       requestAnimationFrame(drawCanvas);
     }
 
-    // 레티나 디스플레이 및 전체 화면 해상도 대응 캔버스 크기 설정
     function resizeCanvas() {
       const dpr = window.devicePixelRatio || 1;
       canvas.width = window.innerWidth * dpr;
@@ -305,7 +351,25 @@
       canvas.style.height = window.innerHeight + 'px';
     }
 
-    // 고음질 오디오 트랙을 포함한 녹화 세팅
+    // 타이머 갱신 (00:00 형식)
+    function startTimer() {
+      recordStartTime = Date.now();
+      timerEl.textContent = '00:00';
+      timerEl.classList.remove('hidden');
+
+      timerInterval = setInterval(() => {
+        const elapsedSeconds = Math.floor((Date.now() - recordStartTime) / 1000);
+        const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
+        const secs = String(elapsedSeconds % 60).padStart(2, '0');
+        timerEl.textContent = `${mins}:${secs}`;
+      }, 1000);
+    }
+
+    function stopTimer() {
+      clearInterval(timerInterval);
+      timerEl.classList.add('hidden');
+    }
+
     function setupRecorder() {
       const canvasStream = canvas.captureStream(30);
       const audioTrack = mediaStream.getAudioTracks()[0];
@@ -315,21 +379,22 @@
       }
 
       const options = MediaRecorder.isTypeSupported('video/mp4') 
-        ? { mimeType: 'video/mp4', videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000 } 
-        : { mimeType: 'video/webm;codecs=vp9,opus', videoBitsPerSecond: 8000000, audioBitsPerSecond: 128000 };
+        ? { mimeType: 'video/mp4', videoBitsPerSecond: 6000000 } 
+        : { mimeType: 'video/webm', videoBitsPerSecond: 6000000 };
 
       try {
         mediaRecorder = new MediaRecorder(canvasStream, options);
       } catch (e) {
-        mediaRecorder = new MediaRecorder(canvasStream); // 기본값 폴백
+        mediaRecorder = new MediaRecorder(canvasStream);
       }
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) recordedChunks.push(e.data);
       };
 
-      // 녹화 종료 시 공유 시트를 열어 갤러리(사진 앱)로 바로 저장 지원
       mediaRecorder.onstop = async () => {
+        stopTimer();
+
         const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/mp4' });
         recordedChunks = [];
 
@@ -349,7 +414,6 @@
           }
         }
 
-        // 공유를 지원하지 않을 경우 다운로드 링크 생성
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
@@ -358,7 +422,6 @@
       };
     }
 
-    // 셔터 버튼 클릭 이벤트 (아이폰 스타일 녹화 시작/정지)
     shutterBtn.addEventListener('click', () => {
       if (!isRecording) {
         if (!mediaRecorder) setupRecorder();
@@ -366,6 +429,7 @@
         mediaRecorder.start();
         isRecording = true;
         shutterBtn.classList.add('recording');
+        startTimer();
       } else {
         mediaRecorder.stop();
         isRecording = false;
