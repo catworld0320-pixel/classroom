@@ -2,7 +2,6 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <!-- Safari 상하단 여백 및 뷰포트 맞춤 설정 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -14,7 +13,6 @@
       padding: 0;
     }
 
-    /* 전체 화면 여백 제거 */
     html, body {
       width: 100%;
       height: 100%;
@@ -24,7 +22,6 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* 전체 화면 카메라 비디오 */
     #camera {
       position: absolute;
       top: 0;
@@ -35,7 +32,6 @@
       z-index: 1;
     }
 
-    /* 속도계 오버레이 영역 */
     .speed-container {
       position: absolute;
       top: max(20px, env(safe-area-inset-top));
@@ -47,21 +43,18 @@
       pointer-events: none;
     }
 
-    /* 검정색 글씨 + 하얀색 외곽선 속도 숫자 */
     .speed-text {
       font-size: clamp(60px, 18vw, 100px);
       font-weight: 900;
       color: #000000;
       line-height: 0.9;
       letter-spacing: -2px;
-      /* 하얀색 외곽선 효과 */
       -webkit-text-stroke: 2.5px #ffffff;
       text-shadow: 
         0 0 4px #ffffff,
         0 0 8px rgba(0, 0, 0, 0.5);
     }
 
-    /* 하단 km/h 단위 표시 */
     .unit-text {
       font-size: clamp(20px, 5vw, 30px);
       font-weight: 800;
@@ -72,7 +65,6 @@
       text-shadow: 0 0 3px #ffffff;
     }
 
-    /* 오류 / 권한 안내 레이어 */
     .error-overlay {
       position: absolute;
       inset: 0;
@@ -132,16 +124,13 @@
 </head>
 <body>
 
-  <!-- 카메라 비디오 화면 -->
   <video id="camera" autoplay muted playsinline></video>
 
-  <!-- 속도 표시 (검정 글씨 + 하얀 외곽선) -->
   <div class="speed-container">
     <div id="speed" class="speed-text">--</div>
     <div class="unit-text">km/h</div>
   </div>
 
-  <!-- 권한 및 에러 안내 모달 (기본 숨김) -->
   <div id="errorOverlay" class="error-overlay hidden">
     <div class="error-card">
       <h2 id="errorTitle">권한 필요</h2>
@@ -158,8 +147,25 @@
     const errorMessage = document.getElementById('errorMessage');
 
     let watchId = null;
+    let lastPosition = null;
+    let currentKmh = 0;
 
-    // 1. 카메라 자동 시작
+    // 하버사인 공식을 이용한 두 좌표 간 거리(미터) 계산
+    function getDistanceMeters(lat1, lon1, lat2, lon2) {
+      const R = 6371e3; // 지구 반지름 (m)
+      const φ1 = lat1 * Math.PI / 180;
+      const φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180;
+      const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+      const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                Math.cos(φ1) * Math.cos(φ2) *
+                Math.sin(Δλ/2) * Math.sin(Δλ/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+
+      return R * c;
+    }
+
     async function initCamera() {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -169,7 +175,7 @@
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
-            facingMode: { ideal: 'environment' }, // 후면 카메라 우선
+            facingMode: { ideal: 'environment' },
             width: { ideal: 1920 },
             height: { ideal: 1080 }
           }
@@ -182,7 +188,6 @@
       }
     }
 
-    // 2. GPS 속도 추적 자동 시작
     function initLocation() {
       if (!navigator.geolocation) {
         showError('GPS 오류', '이 브라우저는 위치 서비스를 지원하지 않습니다.');
@@ -191,21 +196,39 @@
 
       watchId = navigator.geolocation.watchPosition(
         (position) => {
-          const speedMPS = position.coords.speed; // m/s 단위
-          
-          if (speedMPS !== null && !isNaN(speedMPS) && speedMPS >= 0) {
-            const kmh = Math.round(speedMPS * 3.6);
-            speedEl.textContent = kmh;
-          } else {
-            // 속도 측정 대기 중이거나 정지 상태
-            speedEl.textContent = '0';
+          const { latitude, longitude, speed } = position.coords;
+          const timestamp = position.timestamp || Date.now();
+
+          let calculatedKmh = 0;
+
+          // 1. 브라우저가 제공하는 speed 값이 유효한 경우 우선 사용
+          if (speed !== null && !isNaN(speed) && speed >= 0) {
+            calculatedKmh = speed * 3.6;
+          } 
+          // 2. speed 값이 없거나 0으로 고정될 때: 직전 좌표와의 거리/시간 차이로 직접 계산
+          else if (lastPosition) {
+            const timeDiff = (timestamp - lastPosition.timestamp) / 1000; // 초 단위
+            if (timeDiff > 0.1) {
+              const distance = getDistanceMeters(lastPosition.latitude, lastPosition.longitude, latitude, longitude);
+              const mps = distance / timeDiff; // m/s
+              calculatedKmh = mps * 3.6;
+            }
           }
+
+          lastPosition = { latitude, longitude, timestamp };
+
+          // 노이즈(미세한 튐 현상)로 인한 3km/h 미만 속도는 0으로 처리
+          if (calculatedKmh < 3) {
+            currentKmh = 0;
+          } else {
+            currentKmh = Math.round(calculatedKmh);
+          }
+
+          speedEl.textContent = currentKmh;
         },
         (err) => {
           if (err.code === err.PERMISSION_DENIED) {
             showError('위치 권한이 거부되었습니다.', 'Safari의 [설정] > [웹사이트] > [위치/카메라]에서 권한을 \'허용\'으로 설정한 후 새로고침해 주세요.');
-          } else if (err.code === err.POSITION_UNAVAILABLE) {
-            speedEl.textContent = '--';
           } else {
             speedEl.textContent = '--';
           }
@@ -218,7 +241,6 @@
       );
     }
 
-    // 카메라 에러 메시지 분기 처리
     function getCameraErrorMessage(err) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
         return '카메라 권한이 거부되었습니다. Safari 설정에서 카메라 접근 권한을 허용으로 변경해 주세요.';
@@ -226,20 +248,17 @@
       return '카메라를 시작할 수 없습니다. HTTPS 접속 여부를 확인해 주세요.';
     }
 
-    // 에러 메세지 팝업 노출
     function showError(title, message) {
       errorTitle.textContent = title;
       errorMessage.textContent = message;
       errorOverlay.classList.remove('hidden');
     }
 
-    // 페이지 진입 즉시 실행
     window.addEventListener('DOMContentLoaded', () => {
       initCamera();
       initLocation();
     });
 
-    // 화면 떠날 때 트랙 및 GPS 정리
     window.addEventListener('pagehide', () => {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
       if (video.srcObject) {
