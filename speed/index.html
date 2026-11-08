@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>GPS Speed Camera Recorder</title>
+  <title>GPS Speed Camera</title>
   <style>
     * {
       box-sizing: border-box;
@@ -13,7 +13,6 @@
       padding: 0;
     }
 
-    /* 전체 화면 여백 제거 및 원래 카메라 화각 유지 */
     html, body {
       width: 100%;
       height: 100%;
@@ -23,7 +22,7 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* 화면에 직접 보여지는 카메라 비디오 (확대/왜곡 없음) */
+    /* 원래 기본 카메라 뷰 (화각 및 확대 이슈 없음) */
     #camera {
       position: absolute;
       top: 0;
@@ -34,12 +33,7 @@
       z-index: 1;
     }
 
-    /* 녹화용 합성 캔버스 (화면에는 안 보이고 녹화 파일 생성용) */
-    #recordCanvas {
-      display: none;
-    }
-
-    /* 속도계 오버레이 영역 */
+    /* 속도계 오버레이 */
     .speed-container {
       position: absolute;
       top: max(20px, env(safe-area-inset-top));
@@ -51,7 +45,6 @@
       pointer-events: none;
     }
 
-    /* 검정색 글씨 + 하얀색 외곽선 속도 숫자 */
     .speed-text {
       font-size: clamp(60px, 18vw, 100px);
       font-weight: 900;
@@ -64,7 +57,6 @@
         0 0 8px rgba(0, 0, 0, 0.5);
     }
 
-    /* 하단 km/h 단위 표시 */
     .unit-text {
       font-size: clamp(20px, 5vw, 30px);
       font-weight: 800;
@@ -75,80 +67,6 @@
       text-shadow: 0 0 3px #ffffff;
     }
 
-    /* 하단 컨트롤 영역 (아이폰 스타일 셔터 & 타이머) */
-    .controls {
-      position: absolute;
-      bottom: max(35px, env(safe-area-inset-bottom));
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .shutter-wrapper {
-      position: relative;
-      display: flex;
-      align-items: center;
-    }
-
-    .shutter-btn {
-      appearance: none;
-      border: none;
-      background: transparent;
-      width: 76px;
-      height: 76px;
-      border-radius: 50%;
-      border: 4px solid #ffffff;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-      transition: all 0.2s ease;
-    }
-
-    .shutter-inner {
-      width: 62px;
-      height: 62px;
-      border-radius: 50%;
-      background-color: #ffffff;
-      transition: all 0.2s ease;
-    }
-
-    .shutter-btn.recording {
-      border-color: rgba(255, 255, 255, 0.8);
-    }
-
-    .shutter-btn.recording .shutter-inner {
-      background-color: #ff3b30;
-      border-radius: 12px;
-      width: 32px;
-      height: 32px;
-      animation: pulse 1.5s infinite;
-    }
-
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(0.9); }
-      100% { transform: scale(1); }
-    }
-
-    /* 녹화 시간 타이머 (오른쪽에 분:초만 표시) */
-    .timer-text {
-      position: absolute;
-      left: 90px;
-      color: #ffffff;
-      font-size: 18px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-      white-space: nowrap;
-      pointer-events: none;
-    }
-
-    /* 오류 / 권한 안내 레이어 */
     .error-overlay {
       position: absolute;
       inset: 0;
@@ -171,7 +89,6 @@
       width: 100%;
       text-align: center;
       color: #ffffff;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
     }
 
     .error-card h2 {
@@ -208,29 +125,13 @@
 </head>
 <body>
 
-  <!-- 카메라 비디오 화면 -->
   <video id="camera" autoplay muted playsinline></video>
 
-  <!-- 녹화용 숨김 캔버스 -->
-  <canvas id="recordCanvas"></canvas>
-
-  <!-- 속도 표시 (검정 글씨 + 하얀 외곽선, 아래에 km/h) -->
   <div class="speed-container">
     <div id="speed" class="speed-text">--</div>
     <div class="unit-text">km/h</div>
   </div>
 
-  <!-- 아이폰 스타일 녹화 버튼 및 타이머 -->
-  <div class="controls">
-    <div class="shutter-wrapper">
-      <button id="shutterBtn" class="shutter-btn" aria-label="녹화 시작/중지">
-        <div class="shutter-inner"></div>
-      </button>
-      <div id="timer" class="timer-text hidden">00:00</div>
-    </div>
-  </div>
-
-  <!-- 권한 및 에러 안내 모달 -->
   <div id="errorOverlay" class="error-overlay hidden">
     <div class="error-card">
       <h2 id="errorTitle">권한 필요</h2>
@@ -241,28 +142,14 @@
 
   <script>
     const video = document.getElementById('camera');
-    const recordCanvas = document.getElementById('recordCanvas');
-    const rCtx = recordCanvas.getContext('2d', { alpha: false });
     const speedEl = document.getElementById('speed');
-    const shutterBtn = document.getElementById('shutterBtn');
-    const timerEl = document.getElementById('timer');
     const errorOverlay = document.getElementById('errorOverlay');
     const errorTitle = document.getElementById('errorTitle');
     const errorMessage = document.getElementById('errorMessage');
 
     let watchId = null;
     let lastPosition = null;
-    let currentKmh = 0;
 
-    let mediaStream = null;
-    let mediaRecorder = null;
-    let recordedChunks = [];
-    let isRecording = false;
-
-    let recordStartTime = 0;
-    let timerInterval = null;
-
-    // 하버사인 공식을 이용한 거리 계산
     function getDistanceMeters(lat1, lon1, lat2, lon2) {
       const R = 6371e3;
       const φ1 = lat1 * Math.PI / 180;
@@ -278,32 +165,25 @@
       return R * c;
     }
 
-    // 1. 카메라 시작 (주변음 원음 수음 유지)
+    // 마이크(audio: false) 권한을 요청하지 않음으로써 통화모드 버그 차단
     async function initCamera() {
       try {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
           throw new Error('이 브라우저는 카메라 접근을 지원하지 않거나 HTTPS 연결이 아닙니다.');
         }
 
-        mediaStream = await navigator.mediaDevices.getUserMedia({
-          audio: {
-            echoCancellation: false,
-            noiseSuppression: false,
-            autoGainControl: false
-          },
-          video: {
-            facingMode: { ideal: 'environment' }
-          }
+        const stream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: { facingMode: { ideal: 'environment' } }
         });
         
-        video.srcObject = mediaStream;
+        video.srcObject = stream;
         await video.play();
       } catch (err) {
         showError('카메라 오류', getCameraErrorMessage(err));
       }
     }
 
-    // 2. GPS 속도 추적
     function initLocation() {
       if (!navigator.geolocation) {
         showError('GPS 오류', '이 브라우저는 위치 서비스를 지원하지 않습니다.');
@@ -327,156 +207,23 @@
           }
 
           lastPosition = { latitude, longitude, timestamp };
-          currentKmh = calculatedKmh < 3 ? 0 : Math.round(calculatedKmh);
+          const currentKmh = calculatedKmh < 3 ? 0 : Math.round(calculatedKmh);
           speedEl.textContent = currentKmh;
         },
         (err) => {
           if (err.code === err.PERMISSION_DENIED) {
-            showError('위치 권한이 거부되었습니다.', 'Safari의 [설정] > [웹사이트] > [위치/카메라]에서 권한을 \'허용\'으로 설정한 후 새로고침해 주세요.');
+            showError('위치 권한 거부', 'Safari 설정에서 위치 접근을 허용해 주세요.');
           } else {
             speedEl.textContent = '--';
           }
         },
-        {
-          enableHighAccuracy: true,
-          maximumAge: 0,
-          timeout: 10000
-        }
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
       );
     }
 
-    // 3. 타이머 기능 (00:00 형식)
-    function startTimer() {
-      recordStartTime = Date.now();
-      timerEl.textContent = '00:00';
-      timerEl.classList.remove('hidden');
-
-      timerInterval = setInterval(() => {
-        const elapsedSeconds = Math.floor((Date.now() - recordStartTime) / 1000);
-        const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
-        const secs = String(elapsedSeconds % 60).padStart(2, '0');
-        timerEl.textContent = `${mins}:${secs}`;
-      }, 1000);
-    }
-
-    function stopTimer() {
-      clearInterval(timerInterval);
-      timerEl.classList.add('hidden');
-    }
-
-    // 4. 검은 화면 방지를 위한 올바른 프레임 캡처 및 녹화 세팅
-    function setupRecorder() {
-      // 비디오 원본 해상도 반영 (없을 경우 기본 HD 해상도 적용)
-      recordCanvas.width = video.videoWidth || 1920;
-      recordCanvas.height = video.videoHeight || 1080;
-
-      function drawRecordFrame() {
-        if (!isRecording) return;
-        if (video.readyState >= video.HAVE_CURRENT_DATA) {
-          // 비디오 화면을 캔버스에 정확히 그림
-          rCtx.drawImage(video, 0, 0, recordCanvas.width, recordCanvas.height);
-
-          // 속도계 텍스트 합성
-          const speedStr = String(currentKmh);
-          const unitStr = 'km/h';
-
-          rCtx.save();
-          const startX = 45;
-          const startY = 65;
-
-          rCtx.font = '900 110px -apple-system, BlinkMacSystemFont, sans-serif';
-          rCtx.textAlign = 'left';
-          rCtx.textBaseline = 'top';
-
-          rCtx.lineWidth = 8;
-          rCtx.strokeStyle = '#ffffff';
-          rCtx.strokeText(speedStr, startX, startY);
-
-          rCtx.fillStyle = '#000000';
-          rCtx.fillText(speedStr, startX, startY);
-
-          rCtx.font = '800 35px -apple-system, BlinkMacSystemFont, sans-serif';
-          rCtx.lineWidth = 4;
-          rCtx.strokeText(unitStr, startX + 5, startY + 120);
-          rCtx.fillText(unitStr, startX + 5, startY + 120);
-
-          rCtx.restore();
-        }
-        requestAnimationFrame(drawRecordFrame);
-      }
-
-      const canvasStream = recordCanvas.captureStream(30);
-      const audioTrack = mediaStream.getAudioTracks()[0];
-      
-      if (audioTrack) {
-        canvasStream.addTrack(audioTrack);
-      }
-
-      const options = MediaRecorder.isTypeSupported('video/mp4') 
-        ? { mimeType: 'video/mp4', videoBitsPerSecond: 8000000 } 
-        : { mimeType: 'video/webm', videoBitsPerSecond: 8000000 };
-
-      try {
-        mediaRecorder = new MediaRecorder(canvasStream, options);
-      } catch (e) {
-        mediaRecorder = new MediaRecorder(canvasStream);
-      }
-
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) recordedChunks.push(e.data);
-      };
-
-      mediaRecorder.onstop = async () => {
-        stopTimer();
-
-        const blob = new Blob(recordedChunks, { type: mediaRecorder.mimeType || 'video/mp4' });
-        recordedChunks = [];
-
-        const fileExtension = mediaRecorder.mimeType && mediaRecorder.mimeType.includes('webm') ? 'webm' : 'mp4';
-        const file = new File([blob], `riding_${Date.now()}.${fileExtension}`, { type: blob.type });
-
-        if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          try {
-            await navigator.share({
-              files: [file],
-              title: '라이딩 영상',
-              text: 'GPS 속도계가 포함된 라이딩 영상입니다.'
-            });
-            return;
-          } catch (err) {
-            if (err.name === 'AbortError') return;
-          }
-        }
-
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `riding_record_${Date.now()}.${fileExtension}`;
-        a.click();
-      };
-
-      drawRecordFrame();
-    }
-
-    // 셔터 버튼 클릭 이벤트
-    shutterBtn.addEventListener('click', () => {
-      if (!isRecording) {
-        if (!mediaRecorder) setupRecorder();
-        recordedChunks = [];
-        mediaRecorder.start();
-        isRecording = true;
-        shutterBtn.classList.add('recording');
-        startTimer();
-      } else {
-        mediaRecorder.stop();
-        isRecording = false;
-        shutterBtn.classList.remove('recording');
-      }
-    });
-
     function getCameraErrorMessage(err) {
       if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
-        return '카메라 권한이 거부되었습니다. Safari 설정에서 카메라 접근 권한을 허용으로 변경해 주세요.';
+        return '카메라 권한이 거부되었습니다. Safari 설정에서 권한을 허용해 주세요.';
       }
       return '카메라를 시작할 수 없습니다. HTTPS 접속 여부를 확인해 주세요.';
     }
@@ -487,17 +234,15 @@
       errorOverlay.classList.remove('hidden');
     }
 
-    // 페이지 진입 즉시 실행
     window.addEventListener('DOMContentLoaded', () => {
       initCamera();
       initLocation();
     });
 
-    // 화면 떠날 때 정리
     window.addEventListener('pagehide', () => {
       if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-      if (mediaStream) {
-        mediaStream.getTracks().forEach(track => track.stop());
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(track => track.stop());
       }
     });
   </script>
